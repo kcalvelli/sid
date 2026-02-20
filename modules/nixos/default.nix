@@ -47,6 +47,9 @@ let
     default_model = "claude-opus-4-6"
     default_temperature = 0.7
 
+    [agent]
+    max_tool_iterations = 30
+
     [memory]
     backend = "sqlite"
     auto_save = true
