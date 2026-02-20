@@ -72,6 +72,8 @@ let
     workspace_only = true
     allowed_commands = ["git", "ls", "cat", "grep", "find", "jq", "systemctl status", "journalctl"]
     forbidden_paths = ["/etc", "/root", "/proc", "/sys", "~/.ssh", "~/.gnupg", "~/.aws"]
+    max_actions_per_hour = 60
+    max_cost_per_day_cents = 1000
 
     ${telegramConfig}
 
