@@ -29,7 +29,7 @@
             version = "0.1.0";
             src = zeroclaw;
 
-            cargoLock.lockFile = "${zeroclaw}/Cargo.lock";
+            cargoLock.lockFile = zeroclaw + "/Cargo.lock";
 
             # Default features: hardware (nusb) + channel-matrix (matrix-sdk)
             # Code isn't properly feature-gated, so build with defaults
