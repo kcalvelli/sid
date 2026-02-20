@@ -31,11 +31,10 @@
 
             cargoLock.lockFile = "${zeroclaw}/Cargo.lock";
 
-            # No hardware or Matrix needed for Sid
-            buildNoDefaultFeatures = true;
-
+            # Default features: hardware (nusb) + channel-matrix (matrix-sdk)
+            # Code isn't properly feature-gated, so build with defaults
             nativeBuildInputs = with pkgs; [ pkg-config ];
-            buildInputs = with pkgs; [ openssl ];
+            buildInputs = with pkgs; [ openssl systemd ];
 
             # Skip tests — they need network/integration setup
             doCheck = false;
