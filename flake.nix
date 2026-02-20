@@ -31,8 +31,15 @@
 
             cargoLock.lockFile = zeroclaw + "/Cargo.lock";
 
-            # Default features: hardware (nusb) + channel-matrix (matrix-sdk)
-            # Code isn't properly feature-gated, so build with defaults
+            # Upstream HEAD has broken dep declarations:
+            # - `futures` removed from [dependencies] but still used in code
+            # - default features emptied but code assumes them
+            # Patch Cargo.toml to restore the missing dep
+            postPatch = ''
+              # Add futures back as a dependency (removed from Cargo.toml but still used in source)
+              sed -i '/^futures-util/a futures = "0.3"' Cargo.toml
+            '';
+
             nativeBuildInputs = with pkgs; [ pkg-config ];
             buildInputs = with pkgs; [ openssl systemd ];
 
