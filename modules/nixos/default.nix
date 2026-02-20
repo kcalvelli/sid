@@ -18,6 +18,8 @@ let
 
   # Secret paths (agenix)
   telegramTokenFile = "/run/agenix/sid-telegram-bot-token";
+  oauthTokenFile = "/run/agenix/sid-anthropic-oauth-token";
+  gatewayTokenFile = "/run/agenix/openclaw-gateway-token";
 
   # Workspace document files to symlink (read-only, Nix store)
   workspaceFiles = [
@@ -30,17 +32,11 @@ let
   ];
 
   # Build telegram config section dynamically
-  telegramConfig = if cfg.telegram.enable then ''
+  # ZeroClaw: presence of [channels_config.telegram] = enabled; absence = disabled
+  telegramConfig = lib.optionalString cfg.telegram.enable ''
     [channels_config.telegram]
-    enabled = true
-    token = "TELEGRAM_TOKEN_PLACEHOLDER"
-    dm_policy = "${cfg.telegram.dmPolicy}"
-  '' + lib.optionalString (cfg.telegram.dmPolicy == "allowlist" && cfg.telegram.allowFrom != []) ''
-    allow_from = [${lib.concatMapStringsSep ", " toString cfg.telegram.allowFrom}]
-  ''
-  else ''
-    [channels_config.telegram]
-    enabled = false
+    bot_token = "TELEGRAM_TOKEN_PLACEHOLDER"
+    allowed_users = [${lib.concatMapStringsSep ", " (id: ''"${toString id}"'') cfg.telegram.allowFrom}]
   '';
 
   # ZeroClaw config.toml content
@@ -48,7 +44,8 @@ let
   # (zeroclaw auth paste-token --provider anthropic --profile default --auth-kind authorization)
   configToml = ''
     default_provider = "anthropic"
-    default_model = "claude-opus-4-5"
+    default_model = "claude-opus-4-6"
+    default_temperature = 0.7
 
     [memory]
     backend = "sqlite"
@@ -63,17 +60,22 @@ let
     port = ${toString cfg.port}
     require_pairing = true
     allow_public_bind = false
+    paired_tokens = ["GATEWAY_TOKEN_PLACEHOLDER"]
 
     [gateway.http.endpoints.chatCompletions]
     enabled = true
 
     [autonomy]
-    level = "supervised"
-    workspace_only = true
-    allowed_commands = ["git", "ls", "cat", "grep", "find", "jq", "systemctl status", "journalctl"]
-    forbidden_paths = ["/etc", "/root", "/proc", "/sys", "~/.ssh", "~/.gnupg", "~/.aws"]
+    level = "full"
+    workspace_only = false
+    block_high_risk_commands = false
+    allowed_commands = ["git", "ls", "cat", "grep", "find", "head", "wc", "date", "df", "jq", "curl", "free", "lspci", "uptime", "nproc", "systemctl status", "journalctl"]
+    forbidden_paths = ["/etc", "/root", "/sys", "~/.ssh", "~/.gnupg", "~/.aws"]
     max_actions_per_hour = 60
     max_cost_per_day_cents = 1000
+
+    [channels_config]
+    cli = true
 
     ${telegramConfig}
 
@@ -128,6 +130,9 @@ in
     # Core: sid user, workspace, ZeroClaw service, log-export timer
     (lib.mkIf cfg.enable {
       # ── User ──────────────────────────────────────────────────────────
+      # Make zeroclaw CLI available system-wide (for `sudo -u sid zeroclaw ...`)
+      environment.systemPackages = [ cfg.package ];
+
       users.users.sid = {
         isSystemUser = true;
         group = "sid";
@@ -143,7 +148,7 @@ in
       system.activationScripts.sid-workspace = lib.stringAfter [ "users" ] ''
         # Create directories
         mkdir -p ${workspaceDir}
-        mkdir -p ${zeroclawDir}
+        mkdir -p ${zeroclawDir}/workspace
         mkdir -p ${stateDir}/skills
         mkdir -p ${stateDir}/.local/share/sid
         chown -R sid:sid ${stateDir}
@@ -152,41 +157,79 @@ in
         chmod 700 ${zeroclawDir}
 
         # Symlink persona files from Nix store (read-only, immutable)
+        # Into both the legacy workspace dir and ZeroClaw's workspace dir
         ${lib.concatMapStringsSep "\n" (file: ''
           ln -sf ${workspaceSrc}/${file} ${workspaceDir}/${file}
+          ln -sf ${workspaceSrc}/${file} ${zeroclawDir}/workspace/${file}
         '') workspaceFiles}
 
-        # NOTE: MEMORY.md is NOT managed by Nix.
-        # It must be copied in manually at deploy time from the live GenX64 instance:
-        #   cp /var/lib/genxbot/workspace/MEMORY.md /var/lib/sid/workspace/MEMORY.md
-        #   chown sid:sid /var/lib/sid/workspace/MEMORY.md
+        # NOTE: MEMORY.md is NOT managed by Nix — it's writable by the agent.
+        # Create in zeroclaw workspace if it doesn't exist (Sid owns this file).
+        if [ ! -f ${zeroclawDir}/workspace/MEMORY.md ]; then
+          touch ${zeroclawDir}/workspace/MEMORY.md
+          chown sid:sid ${zeroclawDir}/workspace/MEMORY.md
+        fi
 
         # Symlink skills from Nix store (read-only)
+        # Into both legacy dir and ZeroClaw's workspace/skills dir
+        mkdir -p ${zeroclawDir}/workspace/skills
         ln -sfn ${skillsSrc}/cynic ${stateDir}/skills/cynic
         ln -sfn ${skillsSrc}/watchdog ${stateDir}/skills/watchdog
         ln -sfn ${skillsSrc}/email ${stateDir}/skills/email
+        ln -sfn ${skillsSrc}/cynic ${zeroclawDir}/workspace/skills/cynic
+        ln -sfn ${skillsSrc}/watchdog ${zeroclawDir}/workspace/skills/watchdog
+        ln -sfn ${skillsSrc}/email ${zeroclawDir}/workspace/skills/email
 
         # Write config.toml
         cat > ${zeroclawDir}/config.toml << 'CONFIGEOF'
         ${configToml}
         CONFIGEOF
 
-        # Inject Telegram bot token from agenix secret
+        # Inject secrets into config.toml from agenix
         if [ -f "${telegramTokenFile}" ]; then
           TELEGRAM_TOKEN="$(cat "${telegramTokenFile}")"
           ${pkgs.gnused}/bin/sed -i "s|TELEGRAM_TOKEN_PLACEHOLDER|$TELEGRAM_TOKEN|g" ${zeroclawDir}/config.toml
         fi
+        if [ -f "${gatewayTokenFile}" ]; then
+          GATEWAY_TOKEN="$(cat "${gatewayTokenFile}")"
+          ${pkgs.gnused}/bin/sed -i "s|GATEWAY_TOKEN_PLACEHOLDER|$GATEWAY_TOKEN|g" ${zeroclawDir}/config.toml
+        fi
 
         chown sid:sid ${zeroclawDir}/config.toml
         chmod 0400 ${zeroclawDir}/config.toml
+
+        # Write environment file with OAuth token for Anthropic subscription auth
+        if [ -f "${oauthTokenFile}" ]; then
+          echo "ANTHROPIC_OAUTH_TOKEN=$(cat ${oauthTokenFile})" > ${zeroclawDir}/env
+          chown sid:sid ${zeroclawDir}/env
+          chmod 0400 ${zeroclawDir}/env
+        fi
       '';
 
       # ── ZeroClaw service ─────────────────────────────────────────────
       systemd.services.zeroclaw = {
         description = "ZeroClaw agent for Sid";
-        after = [ "network-online.target" ];
-        wants = [ "network-online.target" ];
+        after = [ "network-online.target" "postgresql.service" ];
+        wants = [ "network-online.target" "postgresql.service" ];
         wantedBy = [ "multi-user.target" ];
+
+        # Tools available to ZeroClaw's shell execution
+        # bash is required: ZeroClaw's shell tool runs `sh -c "command"`
+        path = with pkgs; [
+          bash
+          coreutils
+          curl
+          findutils
+          git
+          gnugrep
+          gnused
+          gawk
+          jq
+          procps       # free, uptime, ps
+          pciutils     # lspci
+          systemd      # systemctl, journalctl
+          util-linux   # lscpu, etc.
+        ];
 
         serviceConfig = {
           Type = "simple";
@@ -200,12 +243,13 @@ in
           # Wait for network to settle (Telegram fails otherwise)
           ExecStartPre = "${pkgs.coreutils}/bin/sleep 3";
 
-          ExecStart = "${cfg.package}/bin/zeroclaw agent";
+          ExecStart = "${cfg.package}/bin/zeroclaw daemon";
 
           # Environment
           Environment = [
             "HOME=${stateDir}"
           ];
+          EnvironmentFile = "${zeroclawDir}/env";
 
           # ── Systemd hardening ──────────────────────────────────────
           ProtectHome = "tmpfs";
@@ -309,9 +353,30 @@ in
       };
     })
 
+    # ── PostgreSQL database ───────────────────────────────────────────────
+    (lib.mkIf cfg.enable {
+      services.postgresql = {
+        ensureDatabases = [ "sid" ];
+        ensureUsers = [{
+          name = "sid";
+          ensureDBOwnership = true;
+        }];
+      };
+    })
+
     # ── Firewall ────────────────────────────────────────────────────────
     (lib.mkIf (cfg.enable && cfg.openFirewall) {
       networking.firewall.allowedTCPPorts = [ cfg.port ];
+    })
+
+    # ── Anthropic OAuth token (subscription auth) ────────────────────────
+    (lib.mkIf cfg.enable {
+      age.secrets.sid-anthropic-oauth-token = {
+        file = secretsPath + /anthropic-oauth-token.age;
+        owner = "sid";
+        group = "sid";
+        mode = "0400";
+      };
     })
 
     # ── Telegram secret ─────────────────────────────────────────────────
@@ -329,8 +394,8 @@ in
       age.secrets.sid-email-password = {
         file = secretsPath + /genxbot-email-password.age;
         owner = "sid";
-        group = "sid";
-        mode = "0400";
+        group = "users";
+        mode = "0440";
       };
     })
   ];

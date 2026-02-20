@@ -31,13 +31,36 @@
 
             cargoLock.lockFile = zeroclaw + "/Cargo.lock";
 
-            # Upstream HEAD has broken dep declarations:
-            # - `futures` removed from [dependencies] but still used in code
-            # - default features emptied but code assumes them
-            # Patch Cargo.toml to restore the missing dep
+            buildFeatures = [ "memory-postgres" ];
+
+            # Upstream HEAD has two broken declarations:
+            # 1. `futures` removed from [dependencies] but still used in code
+            # 2. Duplicate `chat` method in reliable.rs (bad merge)
             postPatch = ''
-              # Add futures back as a dependency (removed from Cargo.toml but still used in source)
+              # 1. Add futures back as a dependency
               sed -i '/^futures-util/a futures = "0.3"' Cargo.toml
+
+              # 2. Remove duplicate chat() in reliable.rs (bad merge)
+              ${pkgs.python3}/bin/python3 -c "
+              with open('src/providers/reliable.rs', 'r') as f:
+                  lines = f.read().split('\n')
+              chat_starts = [i for i, l in enumerate(lines) if l.strip() == 'async fn chat(']
+              if len(chat_starts) >= 2:
+                  start = chat_starts[1]
+                  depth = 0
+                  found_open = False
+                  end = start
+                  for i in range(start, len(lines)):
+                      depth += lines[i].count('{') - lines[i].count('}')
+                      if depth > 0:
+                          found_open = True
+                      if found_open and depth == 0:
+                          end = i
+                          break
+                  lines = lines[:start] + lines[end+1:]
+                  with open('src/providers/reliable.rs', 'w') as f:
+                      f.write('\n'.join(lines))
+              "
             '';
 
             nativeBuildInputs = with pkgs; [ pkg-config ];

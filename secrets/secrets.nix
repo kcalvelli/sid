@@ -11,4 +11,7 @@ in
 
   # Email password for genxbot@calvelli.us
   "genxbot-email-password.age".publicKeys = [ edge ];
+
+  # Anthropic OAuth setup token (Claude subscription auth)
+  "anthropic-oauth-token.age".publicKeys = [ edge ];
 }
