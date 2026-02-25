@@ -33,33 +33,64 @@
 
             buildFeatures = [ "memory-postgres" ];
 
-            # Upstream HEAD has two broken declarations:
-            # 1. `futures` removed from [dependencies] but still used in code
-            # 2. Duplicate `chat` method in reliable.rs (bad merge)
             postPatch = ''
-              # 1. Add futures back as a dependency
+              # 1. `futures` crate removed from [dependencies] but still used in code
               sed -i '/^futures-util/a futures = "0.3"' Cargo.toml
 
-              # 2. Remove duplicate chat() in reliable.rs (bad merge)
+              # ── Message timestamps (prepend ISO-8601 to all incoming messages) ──
+
+              # 2. Channel messages: use real send-time from ChannelMessage.timestamp
               ${pkgs.python3}/bin/python3 -c "
-              with open('src/providers/reliable.rs', 'r') as f:
-                  lines = f.read().split('\n')
-              chat_starts = [i for i, l in enumerate(lines) if l.strip() == 'async fn chat(']
-              if len(chat_starts) >= 2:
-                  start = chat_starts[1]
-                  depth = 0
-                  found_open = False
-                  end = start
-                  for i in range(start, len(lines)):
-                      depth += lines[i].count('{') - lines[i].count('}')
-                      if depth > 0:
-                          found_open = True
-                      if found_open and depth == 0:
-                          end = i
-                          break
-                  lines = lines[:start] + lines[end+1:]
-                  with open('src/providers/reliable.rs', 'w') as f:
-                      f.write('\n'.join(lines))
+              with open('src/channels/mod.rs', 'r') as f:
+                  src = f.read()
+              src = src.replace(
+                  'pub mod clawdtalk;',
+                  'use chrono::TimeZone;\n\npub mod clawdtalk;',
+                  1
+              )
+              old = 'append_sender_turn(ctx.as_ref(), &history_key, ChatMessage::user(&msg.content));'
+              q = chr(34)
+              new = (
+                  'let _ts = chrono::Local.timestamp_opt(msg.timestamp as i64, 0)\n'
+                  '        .single()\n'
+                  '        .unwrap_or_else(chrono::Local::now);\n'
+                  '    let _stamped_content = format!(' + q + '[{}] {}' + q + ', _ts.format(' + q + '%Y-%m-%dT%H:%M:%S%:z' + q + '), msg.content);\n'
+                  '    append_sender_turn(ctx.as_ref(), &history_key, ChatMessage::user(&_stamped_content));'
+              )
+              src = src.replace(old, new, 1)
+              with open('src/channels/mod.rs', 'w') as f:
+                  f.write(src)
+              "
+
+              # 3. Heartbeat messages: stamp with Local::now() at dispatch
+              ${pkgs.python3}/bin/python3 -c "
+              with open('src/daemon/mod.rs', 'r') as f:
+                  src = f.read()
+              src = src.replace('use chrono::Utc;', 'use chrono::{Local, Utc};', 1)
+              q = chr(34)
+              old = 'let prompt = format!(' + q + '[Heartbeat Task] {task}' + q + ');'
+              new = 'let prompt = format!(' + q + '[{}] [Heartbeat Task] {task}' + q + ', chrono::Local::now().format(' + q + '%Y-%m-%dT%H:%M:%S%:z' + q + '));'
+              src = src.replace(old, new, 1)
+              with open('src/daemon/mod.rs', 'w') as f:
+                  f.write(src)
+              "
+
+              # 4. Webhook messages: stamp with Local::now() at receipt
+              ${pkgs.python3}/bin/python3 -c "
+              with open('src/gateway/mod.rs', 'r') as f:
+                  src = f.read()
+              src = src.replace(
+                  'use crate::channels:',
+                  'use chrono::Local;\nuse crate::channels:',
+                  1
+              )
+              q = chr(34)
+              old = 'let user_messages = vec![ChatMessage::user(message)];'
+              new = ('let _stamped = format!(' + q + '[{}] {}' + q + ', chrono::Local::now().format(' + q + '%Y-%m-%dT%H:%M:%S%:z' + q + '), message);\n'
+                     '    let user_messages = vec![ChatMessage::user(&_stamped)];')
+              src = src.replace(old, new, 1)
+              with open('src/gateway/mod.rs', 'w') as f:
+                  f.write(src)
               "
             '';
 
