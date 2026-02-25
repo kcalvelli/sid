@@ -137,17 +137,12 @@ EOF
 
 ## Step 6: Send Alert or Digest
 
+Send emails via `msmtp` from genxbot@calvelli.us.
+
 ### Immediate Alert
 
 ```bash
-curl -s -X POST 'http://127.0.0.1:8085/api/tools/axios-ai-mail/send_email' \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "account": "genxbot",
-    "to": "keith@calvelli.dev",
-    "subject": "🔥 [CRITICAL] Your hardware needs attention NOW",
-    "body": "MESSAGE"
-  }'
+printf 'To: keith@calvelli.dev\nFrom: genxbot@calvelli.us\nSubject: SUBJECT_HERE\n\nMESSAGE_HERE\n\n-- Sid' | msmtp keith@calvelli.dev
 ```
 
 Subject lines by severity:
@@ -160,14 +155,7 @@ Subject lines by severity:
 Send at 08:00 if digest_queue is not empty:
 
 ```bash
-curl -s -X POST 'http://127.0.0.1:8085/api/tools/axios-ai-mail/send_email' \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "account": "genxbot",
-    "to": "keith@calvelli.dev",
-    "subject": "📰 Daily System Digest - Nothing caught fire",
-    "body": "DIGEST_MESSAGE"
-  }'
+printf 'To: keith@calvelli.dev\nFrom: genxbot@calvelli.us\nSubject: 📰 Daily System Digest - Nothing caught fire\n\nDIGEST_MESSAGE\n\n-- Sid' | msmtp keith@calvelli.dev
 ```
 
 After sending digest, clear the queue and update `last_digest` timestamp.

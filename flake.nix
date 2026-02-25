@@ -92,6 +92,94 @@
               with open('src/gateway/mod.rs', 'w') as f:
                   f.write(src)
               "
+
+              # ── XMPP channel (native Prosody integration) ──
+
+              # 5. Copy XMPP channel source into the source tree
+              cp ${./patches/xmpp.rs} src/channels/xmpp.rs
+
+              # 6. Patch src/channels/mod.rs: add module declaration + re-export + channel instantiation
+              ${pkgs.python3}/bin/python3 -c "
+              with open('src/channels/mod.rs', 'r') as f:
+                  src = f.read()
+
+              # Add module declaration (after whatsapp_web)
+              src = src.replace(
+                  'pub mod whatsapp_web;\n',
+                  'pub mod whatsapp_web;\npub mod xmpp;\n',
+                  1
+              )
+
+              # Add re-export (after WhatsAppWebChannel)
+              src = src.replace(
+                  'pub use whatsapp_web::WhatsAppWebChannel;\n',
+                  'pub use whatsapp_web::WhatsAppWebChannel;\npub use xmpp::XmppChannel;\n',
+                  1
+              )
+
+              # Add XMPP channel to collect_configured_channels (before the closing 'channels' return)
+              old_collect = '    channels\n}'
+              new_collect = (
+                  '    if let Some(ref xmpp_cfg) = config.channels_config.xmpp {\n'
+                  '        channels.push(ConfiguredChannel {\n'
+                  '            display_name: \"XMPP\",\n'
+                  '            channel: Arc::new(XmppChannel::new(xmpp_cfg)),\n'
+                  '        });\n'
+                  '    }\n'
+                  '\n'
+                  '    channels\n'
+                  '}'
+              )
+              # Find the LAST occurrence of 'channels\n}' in collect_configured_channels
+              # by replacing from the end
+              idx = src.rfind('    channels\n}')
+              if idx is not None and idx > 2600:  # sanity: must be in collect_configured_channels area
+                  src = src[:idx] + new_collect + src[idx + len(old_collect):]
+
+              with open('src/channels/mod.rs', 'w') as f:
+                  f.write(src)
+              "
+
+              # 7. Patch src/config/schema.rs: add xmpp field to ChannelsConfig + Default impl
+              ${pkgs.python3}/bin/python3 -c "
+              with open('src/config/schema.rs', 'r') as f:
+                  src = f.read()
+
+              # Add xmpp field to ChannelsConfig struct (after clawdtalk field)
+              src = src.replace(
+                  '    pub clawdtalk: Option<crate::channels::clawdtalk::ClawdTalkConfig>,',
+                  ('    pub clawdtalk: Option<crate::channels::clawdtalk::ClawdTalkConfig>,\n'
+                   '    /// XMPP channel configuration.\n'
+                   '    pub xmpp: Option<crate::channels::xmpp::XmppConfig>,'),
+                  1
+              )
+
+              # Add xmpp: None to Default impl (after clawdtalk: None)
+              src = src.replace(
+                  '            clawdtalk: None,',
+                  '            clawdtalk: None,\n            xmpp: None,',
+                  1
+              )
+
+              with open('src/config/schema.rs', 'w') as f:
+                  f.write(src)
+              "
+
+              # 8. Patch src/tools/mod.rs: register XMPP tools when channel is configured
+              ${pkgs.python3}/bin/python3 -c "
+              with open('src/tools/mod.rs', 'r') as f:
+                  src = f.read()
+
+              # Add XMPP tools before the final boxed_registry_from_arcs call
+              src = src.replace(
+                  '    boxed_registry_from_arcs(tool_arcs)\n}',
+                  '    // XMPP tools (conditionally registered when XMPP channel is configured)\n    if root_config.channels_config.xmpp.is_some() {\n        tool_arcs.extend(crate::channels::xmpp::xmpp_tools());\n    }\n\n    boxed_registry_from_arcs(tool_arcs)\n}',
+                  1
+              )
+
+              with open('src/tools/mod.rs', 'w') as f:
+                  f.write(src)
+              "
             '';
 
             nativeBuildInputs = with pkgs; [ pkg-config ];

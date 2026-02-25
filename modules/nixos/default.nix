@@ -18,6 +18,8 @@ let
 
   # Secret paths (agenix)
   telegramTokenFile = "/run/agenix/sid-telegram-bot-token";
+  emailPasswordFile = "/run/agenix/sid-email-password";
+  xmppPasswordFile = "/run/agenix/sid-xmpp-password";
   oauthTokenFile = "/run/agenix/sid-anthropic-oauth-token";
   gatewayTokenFile = "/run/agenix/openclaw-gateway-token";
 
@@ -37,6 +39,31 @@ let
     [channels_config.telegram]
     bot_token = "TELEGRAM_TOKEN_PLACEHOLDER"
     allowed_users = [${lib.concatMapStringsSep ", " (id: ''"${toString id}"'') cfg.telegram.allowFrom}]
+  '';
+
+  # Build email config section dynamically
+  # ZeroClaw: presence of [channels_config.email] = enabled; absence = disabled
+  emailConfig = lib.optionalString cfg.email.enable ''
+    [channels_config.email]
+    imap_host = "london.mxroute.com"
+    smtp_host = "london.mxroute.com"
+    username = "genxbot@calvelli.us"
+    password = "EMAIL_PASSWORD_PLACEHOLDER"
+    from_address = "genxbot@calvelli.us"
+    allowed_senders = ["*"]
+  '';
+
+  # Build XMPP config section dynamically
+  # ZeroClaw: presence of [channels_config.xmpp] = enabled; absence = disabled
+  xmppConfig = lib.optionalString cfg.xmpp.enable ''
+    [channels_config.xmpp]
+    jid = "${cfg.xmpp.jid}"
+    password = "XMPP_PASSWORD_PLACEHOLDER"
+    server = "${cfg.xmpp.server}"
+    port = ${toString cfg.xmpp.port}
+    ssl_verify = ${lib.boolToString cfg.xmpp.sslVerify}
+    muc_rooms = [${lib.concatMapStringsSep ", " (r: ''"${r}"'') cfg.xmpp.mucRooms}]
+    muc_nick = "${cfg.xmpp.mucNick}"
   '';
 
   # ZeroClaw config.toml content
@@ -72,7 +99,7 @@ let
     level = "full"
     workspace_only = false
     block_high_risk_commands = false
-    allowed_commands = ["git", "ls", "cat", "grep", "find", "head", "wc", "date", "df", "jq", "curl", "free", "lspci", "uptime", "nproc", "systemctl status", "journalctl"]
+    allowed_commands = ["git", "ls", "cat", "grep", "find", "head", "wc", "date", "df", "jq", "free", "lspci", "uptime", "nproc", "systemctl status", "journalctl", "msmtp", "printf"]
     forbidden_paths = ["/etc", "/root", "/sys", "~/.ssh", "~/.gnupg", "~/.aws"]
     max_actions_per_hour = 60
     max_cost_per_day_cents = 1000
@@ -81,6 +108,10 @@ let
     cli = true
 
     ${telegramConfig}
+
+    ${emailConfig}
+
+    ${xmppConfig}
 
     [secrets]
     encrypt = true
@@ -126,6 +157,40 @@ in
 
     email = {
       enable = lib.mkEnableOption "Sid email account (genxbot@calvelli.us)";
+    };
+
+    xmpp = {
+      enable = lib.mkEnableOption "XMPP channel (native Prosody integration)";
+      jid = lib.mkOption {
+        type = lib.types.str;
+        default = "sid@localhost";
+        description = "Full JID for the XMPP bot (e.g. sid@example.com)";
+      };
+      server = lib.mkOption {
+        type = lib.types.str;
+        default = "localhost";
+        description = "XMPP server hostname (may differ from JID domain for Tailscale setups)";
+      };
+      port = lib.mkOption {
+        type = lib.types.port;
+        default = 5222;
+        description = "XMPP server port (STARTTLS)";
+      };
+      sslVerify = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = "Verify TLS certificates (set false for self-signed certs)";
+      };
+      mucRooms = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        default = [];
+        description = "MUC room JIDs to auto-join on startup";
+      };
+      mucNick = lib.mkOption {
+        type = lib.types.str;
+        default = "Sid";
+        description = "Nick to use in MUC rooms";
+      };
     };
   };
 
@@ -197,6 +262,35 @@ in
           GATEWAY_TOKEN="$(cat "${gatewayTokenFile}")"
           ${pkgs.gnused}/bin/sed -i "s|GATEWAY_TOKEN_PLACEHOLDER|$GATEWAY_TOKEN|g" ${zeroclawDir}/config.toml
         fi
+        if [ -f "${xmppPasswordFile}" ]; then
+          XMPP_PASSWORD="$(cat "${xmppPasswordFile}")"
+          ${pkgs.gnused}/bin/sed -i "s|XMPP_PASSWORD_PLACEHOLDER|$XMPP_PASSWORD|g" ${zeroclawDir}/config.toml
+        fi
+
+        if [ -f "${emailPasswordFile}" ]; then
+          EMAIL_PASSWORD="$(cat "${emailPasswordFile}")"
+          ${pkgs.gnused}/bin/sed -i "s|EMAIL_PASSWORD_PLACEHOLDER|$EMAIL_PASSWORD|g" ${zeroclawDir}/config.toml
+
+          # Generate .msmtprc for outbound email via shell
+          cat > ${stateDir}/.msmtprc << MSMTPEOF
+        defaults
+        auth on
+        tls on
+        tls_trust_file /etc/ssl/certs/ca-certificates.crt
+
+        account genxbot
+        host london.mxroute.com
+        port 465
+        tls_starttls off
+        from genxbot@calvelli.us
+        user genxbot@calvelli.us
+        password $EMAIL_PASSWORD
+
+        account default : genxbot
+        MSMTPEOF
+          chown sid:sid ${stateDir}/.msmtprc
+          chmod 0400 ${stateDir}/.msmtprc
+        fi
 
         chown sid:sid ${zeroclawDir}/config.toml
         chmod 0400 ${zeroclawDir}/config.toml
@@ -221,13 +315,13 @@ in
         path = with pkgs; [
           bash
           coreutils
-          curl
           findutils
           git
           gnugrep
           gnused
           gawk
           jq
+          msmtp        # outbound email
           procps       # free, uptime, ps
           pciutils     # lspci
           systemd      # systemctl, journalctl
@@ -399,6 +493,16 @@ in
         owner = "sid";
         group = "users";
         mode = "0440";
+      };
+    })
+
+    # ── XMPP secret ──────────────────────────────────────────────────
+    (lib.mkIf (cfg.enable && cfg.xmpp.enable) {
+      age.secrets.sid-xmpp-password = {
+        file = secretsPath + /xmpp-password.age;
+        owner = "sid";
+        group = "sid";
+        mode = "0400";
       };
     })
   ];
