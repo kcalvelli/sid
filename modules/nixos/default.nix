@@ -113,6 +113,10 @@ let
 
     ${xmppConfig}
 
+    [web_fetch]
+    enabled = true
+    allowed_domains = ["*"]
+
     [secrets]
     encrypt = true
 

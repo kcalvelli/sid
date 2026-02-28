@@ -78,11 +78,11 @@ The channel SHALL send XEP-0085 chat state notifications. When `start_typing()` 
 
 ### Requirement: XMPP channel detects and downloads OOB media
 
-The channel SHALL detect Out-of-Band Data (XEP-0066) URLs in incoming messages. When an OOB URL points to a supported media type (JPEG, PNG, GIF, WebP up to 3.75MB; PDF up to 32MB), the channel SHALL download the file and include it in the message content as a local file path reference. Unsupported file types or oversized files SHALL be noted in the message content but not downloaded.
+The channel SHALL detect Out-of-Band Data (XEP-0066) URLs in incoming messages. When an OOB URL points to a supported image format (JPEG, PNG, GIF, WebP up to 3.75MB), the channel SHALL download the file and include it in the message content using the `[IMAGE:/path]` marker format so it enters ZeroClaw's multimodal pipeline. When an OOB URL points to a non-image type (PDF up to 32MB), the channel SHALL download and include it as `[Attached file: /path]`. Unsupported file types or oversized files SHALL be noted in the message content but not downloaded.
 
 #### Scenario: Image shared via OOB
-- **WHEN** a message includes an OOB URL pointing to a JPEG image (2MB)
-- **THEN** the channel SHALL download the image to a temporary file and include the file path in the `ChannelMessage` content
+- **WHEN** a message includes an OOB URL pointing to a JPEG, PNG, GIF, or WebP image
+- **THEN** the channel SHALL download the image to `/tmp/xmpp_media_<timestamp>.<ext>` and the message content includes `[IMAGE:/tmp/xmpp_media_<timestamp>.<ext>]`
 
 #### Scenario: Oversized file via OOB
 - **WHEN** a message includes an OOB URL pointing to a 50MB video file

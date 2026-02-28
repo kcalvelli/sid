@@ -180,6 +180,150 @@
               with open('src/tools/mod.rs', 'w') as f:
                   f.write(src)
               "
+
+              # ── Image vision: patch Anthropic provider for Claude vision API ──
+
+              # 9. Add ImageSource struct + Image variant to NativeContentOut
+              ${pkgs.python3}/bin/python3 -c "
+              with open('src/providers/anthropic.rs', 'r') as f:
+                  src = f.read()
+
+              # Add ImageSource struct before NativeContentOut enum
+              src = src.replace(
+                  '#[derive(Debug, Serialize)]\n#[serde(tag = \"type\")]\nenum NativeContentOut {',
+                  ('#[derive(Debug, Serialize)]\nstruct ImageSource {\n'
+                   '    #[serde(rename = \"type\")]\n'
+                   '    source_type: String,\n'
+                   '    media_type: String,\n'
+                   '    data: String,\n'
+                   '}\n\n'
+                   '#[derive(Debug, Serialize)]\n#[serde(tag = \"type\")]\nenum NativeContentOut {'),
+                  1
+              )
+
+              # Add Image variant after ToolResult variant
+              src = src.replace(
+                  '    #[serde(rename = \"tool_result\")]\n    ToolResult {\n        tool_use_id: String,\n        content: String,\n        #[serde(skip_serializing_if = \"Option::is_none\")]\n        cache_control: Option<CacheControl>,\n    },\n}',
+                  ('    #[serde(rename = \"tool_result\")]\n    ToolResult {\n        tool_use_id: String,\n        content: String,\n        #[serde(skip_serializing_if = \"Option::is_none\")]\n        cache_control: Option<CacheControl>,\n    },\n'
+                   '    #[serde(rename = \"image\")]\n    Image {\n        source: ImageSource,\n    },\n}'),
+                  1
+              )
+
+              with open('src/providers/anthropic.rs', 'w') as f:
+                  f.write(src)
+              "
+
+              # 10. Declare vision capability on AnthropicProvider
+              ${pkgs.python3}/bin/python3 -c "
+              with open('src/providers/anthropic.rs', 'r') as f:
+                  src = f.read()
+
+              src = src.replace(
+                  'impl Provider for AnthropicProvider {\n    async fn chat_with_system(',
+                  ('impl Provider for AnthropicProvider {\n'
+                   '    fn capabilities(&self) -> crate::providers::traits::ProviderCapabilities {\n'
+                   '        crate::providers::traits::ProviderCapabilities {\n'
+                   '            native_tool_calling: true,\n'
+                   '            vision: true,\n'
+                   '        }\n'
+                   '    }\n\n'
+                   '    async fn chat_with_system('),
+                  1
+              )
+
+              with open('src/providers/anthropic.rs', 'w') as f:
+                  f.write(src)
+              "
+
+              # 11. Add Image arm to apply_cache_to_last_message
+              ${pkgs.python3}/bin/python3 -c "
+              with open('src/providers/anthropic.rs', 'r') as f:
+                  src = f.read()
+
+              src = src.replace(
+                  '                    NativeContentOut::ToolUse { .. } => {}\n                }',
+                  '                    NativeContentOut::ToolUse { .. } => {}\n                    NativeContentOut::Image { .. } => {}\n                }',
+                  1
+              )
+
+              with open('src/providers/anthropic.rs', 'w') as f:
+                  f.write(src)
+              "
+
+              # 11. Patch convert_messages() to parse [IMAGE:] markers in user messages
+              ${pkgs.python3}/bin/python3 -c "
+              with open('src/providers/anthropic.rs', 'r') as f:
+                  src = f.read()
+
+              # Add helper functions before convert_messages
+              old_fn = '    fn convert_messages(messages: &[ChatMessage]) -> (Option<SystemPrompt>, Vec<NativeMessage>) {'
+              helper = (
+                  '    /// Parse a data URI (data:mime;base64,payload) into an ImageSource.\n'
+                  '    fn parse_data_uri_image(data_uri: &str) -> Option<ImageSource> {\n'
+                  '        let rest = data_uri.strip_prefix(\"data:\")?;\n'
+                  '        let (mime, payload) = rest.split_once(\";base64,\")?;\n'
+                  '        if mime.is_empty() || payload.is_empty() {\n'
+                  '            return None;\n'
+                  '        }\n'
+                  '        Some(ImageSource {\n'
+                  '            source_type: \"base64\".to_string(),\n'
+                  '            media_type: mime.to_string(),\n'
+                  '            data: payload.to_string(),\n'
+                  '        })\n'
+                  '    }\n'
+                  '\n'
+                  '    /// Build content blocks from a message that may contain [IMAGE:data:...] markers.\n'
+                  '    fn build_user_content_blocks(content: &str) -> Vec<NativeContentOut> {\n'
+                  '        let (text, image_refs) = crate::multimodal::parse_image_markers(content);\n'
+                  '        let mut blocks = Vec::new();\n'
+                  '        if !text.is_empty() {\n'
+                  '            blocks.push(NativeContentOut::Text {\n'
+                  '                text,\n'
+                  '                cache_control: None,\n'
+                  '            });\n'
+                  '        }\n'
+                  '        for img_ref in &image_refs {\n'
+                  '            if let Some(source) = Self::parse_data_uri_image(img_ref) {\n'
+                  '                blocks.push(NativeContentOut::Image { source });\n'
+                  '            }\n'
+                  '        }\n'
+                  '        if blocks.is_empty() {\n'
+                  '            blocks.push(NativeContentOut::Text {\n'
+                  '                text: content.to_string(),\n'
+                  '                cache_control: None,\n'
+                  '            });\n'
+                  '        }\n'
+                  '        blocks\n'
+                  '    }\n'
+                  '\n'
+              )
+              src = src.replace(old_fn, helper + old_fn, 1)
+
+              # Replace the user message branch to use build_user_content_blocks
+              old_user = (
+                  '                _ => {\n'
+                  '                    native_messages.push(NativeMessage {\n'
+                  '                        role: \"user\".to_string(),\n'
+                  '                        content: vec![NativeContentOut::Text {\n'
+                  '                            text: msg.content.clone(),\n'
+                  '                            cache_control: None,\n'
+                  '                        }],\n'
+                  '                    });\n'
+                  '                }'
+              )
+              new_user = (
+                  '                _ => {\n'
+                  '                    native_messages.push(NativeMessage {\n'
+                  '                        role: \"user\".to_string(),\n'
+                  '                        content: Self::build_user_content_blocks(&msg.content),\n'
+                  '                    });\n'
+                  '                }'
+              )
+              src = src.replace(old_user, new_user, 1)
+
+              with open('src/providers/anthropic.rs', 'w') as f:
+                  f.write(src)
+              "
             '';
 
             nativeBuildInputs = with pkgs; [ pkg-config ];

@@ -379,7 +379,19 @@ impl XmppChannel {
             None => return body.to_string(),
         };
         match self.download_oob_media(&url).await {
-            Ok(path) => format!("{body}\n[Attached file: {path}]"),
+            Ok(path) => {
+                let lower = path.to_lowercase();
+                if lower.ends_with(".jpg")
+                    || lower.ends_with(".jpeg")
+                    || lower.ends_with(".png")
+                    || lower.ends_with(".gif")
+                    || lower.ends_with(".webp")
+                {
+                    format!("{body}\n[IMAGE:{path}]")
+                } else {
+                    format!("{body}\n[Attached file: {path}]")
+                }
+            }
             Err(e) => {
                 tracing::warn!("OOB download failed for {url}: {e}");
                 format!("{body}\n[Attached media: {url} — download failed: {e}]")
