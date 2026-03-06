@@ -198,6 +198,34 @@
                   f.write(src)
               "
 
+              # ── /v1/models: static OpenAI-compatible model list (no auth) ──
+
+              # 8.6. Add /v1/models endpoint returning static model list for HA discovery
+              ${pkgs.python3}/bin/python3 -c "
+              with open('src/gateway/mod.rs', 'r') as f:
+                  src = f.read()
+
+              # Add the handler function right before handle_webhook
+              handler = (
+                  'async fn handle_models() -> impl axum::response::IntoResponse {\n'
+                  '    ([(\x22content-type\x22, \x22application/json\x22)],\n'
+                  '     r#\x22{\x22object\x22:\x22list\x22,\x22data\x22:[{\x22id\x22:\x22sid\x22,\x22object\x22:\x22model\x22}]}\x22#)\n'
+                  '}\n\n'
+              )
+              old_webhook = 'async fn handle_webhook('
+              assert old_webhook in src, f'Could not find: {old_webhook}'
+              src = src.replace(old_webhook, handler + old_webhook, 1)
+
+              # Add route to Router (after /health)
+              old_health = '.route(\x22/health\x22, get(handle_health))'
+              new_health = old_health + '\n        .route(\x22/v1/models\x22, get(handle_models))'
+              assert old_health in src, f'Could not find: {old_health}'
+              src = src.replace(old_health, new_health, 1)
+
+              with open('src/gateway/mod.rs', 'w') as f:
+                  f.write(src)
+              "
+
               # ── Image vision: patch Anthropic provider for Claude vision API ──
 
               # 9. Add ImageSource struct + Image variant to NativeContentOut
