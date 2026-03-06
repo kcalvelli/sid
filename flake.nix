@@ -181,6 +181,23 @@
                   f.write(src)
               "
 
+              # ── Webhook tool loop: use full agent loop instead of simple chat ──
+
+              # 8.5. Replace run_gateway_chat_simple with run_gateway_chat_with_tools in handle_webhook
+              ${pkgs.python3}/bin/python3 -c "
+              with open('src/gateway/mod.rs', 'r') as f:
+                  src = f.read()
+              # The webhook handler calls run_gateway_chat_simple (no tools, single-shot).
+              # Switch to run_gateway_chat_with_tools which runs the full agent loop.
+              # webhook_session_id (Option<&str>) is already extracted earlier in handle_webhook().
+              old = 'run_gateway_chat_simple(&state, message).await'
+              new = 'run_gateway_chat_with_tools(&state, message).await'
+              assert old in src, f'Could not find: {old}'
+              src = src.replace(old, new, 1)
+              with open('src/gateway/mod.rs', 'w') as f:
+                  f.write(src)
+              "
+
               # ── Image vision: patch Anthropic provider for Claude vision API ──
 
               # 9. Add ImageSource struct + Image variant to NativeContentOut
