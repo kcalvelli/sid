@@ -6,5 +6,5 @@
 ## 2. Verification
 
 - [x] 2.1 Build the patched ZeroClaw package (`nix build .#zeroclaw`) and confirm it compiles
-- [ ] 2.2 Deploy to edge (`nix flake lock --update-input sid` + `nixos-rebuild switch`) and test with curl: send a message that requires tool use (e.g., "What's the server uptime?") and confirm the response includes tool output
-- [ ] 2.3 Test that a simple conversational message (no tool use) still returns a normal response
+- [x] 2.2 Deploy to edge (`nix flake lock --update-input sid` + `nixos-rebuild switch`) and test with curl: send a message that requires tool use (e.g., "What's the server uptime?") and confirm the response includes tool output
+- [x] 2.3 Test that a simple conversational message (no tool use) still returns a normal response
