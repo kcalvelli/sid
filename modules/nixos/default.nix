@@ -163,6 +163,10 @@ in
       enable = lib.mkEnableOption "Sid email account (genxbot@calvelli.us)";
     };
 
+    postgres = {
+      enable = lib.mkEnableOption "PostgreSQL database for Sid (not needed when using SQLite memory backend)";
+    };
+
     xmpp = {
       enable = lib.mkEnableOption "XMPP channel (native Prosody integration)";
       jid = lib.mkOption {
@@ -310,8 +314,8 @@ in
       # ── ZeroClaw service ─────────────────────────────────────────────
       systemd.services.zeroclaw = {
         description = "ZeroClaw agent for Sid";
-        after = [ "network-online.target" "postgresql.service" ];
-        wants = [ "network-online.target" "postgresql.service" ];
+        after = [ "network-online.target" ] ++ lib.optional cfg.postgres.enable "postgresql.service";
+        wants = [ "network-online.target" ] ++ lib.optional cfg.postgres.enable "postgresql.service";
         wantedBy = [ "multi-user.target" ];
 
         # Tools available to ZeroClaw's shell execution
@@ -454,8 +458,8 @@ in
       };
     })
 
-    # ── PostgreSQL database ───────────────────────────────────────────────
-    (lib.mkIf cfg.enable {
+    # ── PostgreSQL database (optional — only if postgres memory backend is used) ──
+    (lib.mkIf (cfg.enable && cfg.postgres.enable) {
       services.postgresql = {
         ensureDatabases = [ "sid" ];
         ensureUsers = [{
