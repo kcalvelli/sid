@@ -226,6 +226,82 @@
                   f.write(src)
               "
 
+              # ── /v1/chat/completions: OpenAI-compatible chat endpoint ──
+
+              # 8.7. Add /v1/chat/completions endpoint wrapping run_gateway_chat_with_tools
+              cat > _chat_completions.rs << 'HANDLER_EOF'
+#[derive(serde::Deserialize)]
+struct ChatCompletionsMessage {
+    role: String,
+    content: String,
+}
+
+#[derive(serde::Deserialize)]
+struct ChatCompletionsBody {
+    messages: Vec<ChatCompletionsMessage>,
+}
+
+async fn handle_chat_completions(
+    State(state): State<AppState>,
+    body: Result<Json<ChatCompletionsBody>, axum::extract::rejection::JsonRejection>,
+) -> impl IntoResponse {
+    let Json(body) = match body {
+        Ok(b) => b,
+        Err(e) => {
+            tracing::warn!("/v1/chat/completions JSON parse error: {e}");
+            let err = serde_json::json!({"error": {"message": format!("Invalid JSON: {e}"), "type": "invalid_request_error"}});
+            return (StatusCode::BAD_REQUEST, Json(err));
+        }
+    };
+    let message = body.messages.iter().rev()
+        .find(|m| m.role == "user")
+        .map(|m| m.content.as_str())
+        .unwrap_or("");
+    if message.is_empty() {
+        let err = serde_json::json!({"error": {"message": "No user message found in messages array", "type": "invalid_request_error"}});
+        return (StatusCode::BAD_REQUEST, Json(err));
+    }
+    match run_gateway_chat_with_tools(&state, message).await {
+        Ok(response) => {
+            let body = serde_json::json!({
+                "id": "chatcmpl-sid",
+                "object": "chat.completion",
+                "model": "sid",
+                "choices": [{
+                    "index": 0,
+                    "message": {"role": "assistant", "content": response},
+                    "finish_reason": "stop"
+                }]
+            });
+            (StatusCode::OK, Json(body))
+        }
+        Err(e) => {
+            let sanitized = providers::sanitize_api_error(&e.to_string());
+            tracing::error!("/v1/chat/completions error: {sanitized}");
+            let err = serde_json::json!({"error": {"message": sanitized, "type": "server_error"}});
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(err))
+        }
+    }
+}
+HANDLER_EOF
+              ${pkgs.python3}/bin/python3 -c "
+              with open('_chat_completions.rs') as f:
+                  handler = f.read()
+              with open('src/gateway/mod.rs', 'r') as f:
+                  src = f.read()
+              # Insert handler structs + fn before handle_webhook
+              old = 'async fn handle_webhook('
+              assert old in src, f'Could not find: {old}'
+              src = src.replace(old, handler + '\n' + old, 1)
+              # Add route after /webhook
+              old_route = '.route(\x22/webhook\x22, post(handle_webhook))'
+              new_route = old_route + '\n        .route(\x22/v1/chat/completions\x22, post(handle_chat_completions))'
+              assert old_route in src, f'Could not find: {old_route}'
+              src = src.replace(old_route, new_route, 1)
+              with open('src/gateway/mod.rs', 'w') as f:
+                  f.write(src)
+              "
+
               # ── Image vision: patch Anthropic provider for Claude vision API ──
 
               # 9. Add ImageSource struct + Image variant to NativeContentOut
