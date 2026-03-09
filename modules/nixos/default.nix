@@ -99,7 +99,7 @@ let
     level = "full"
     workspace_only = false
     block_high_risk_commands = false
-    allowed_commands = ["git", "ls", "cat", "grep", "find", "head", "wc", "date", "df", "jq", "free", "lspci", "uptime", "nproc", "systemctl status", "journalctl", "msmtp", "printf"]
+    allowed_commands = ["git", "ls", "cat", "grep", "find", "head", "wc", "date", "df", "jq", "free", "lspci", "uptime", "nproc", "systemctl status", "journalctl", "msmtp", "printf", "mcp-gw"]
     forbidden_paths = ["/etc", "/root", "/sys", "~/.ssh", "~/.gnupg", "~/.aws"]
     max_actions_per_hour = 60
     max_cost_per_day_cents = 1000
@@ -131,6 +131,12 @@ in
     package = lib.mkOption {
       type = lib.types.package;
       description = "The ZeroClaw package to use";
+    };
+
+    extraPackages = lib.mkOption {
+      type = lib.types.listOf lib.types.package;
+      default = [];
+      description = "Extra packages to add to the ZeroClaw service PATH";
     };
 
     port = lib.mkOption {
@@ -252,9 +258,11 @@ in
         ln -sfn ${skillsSrc}/cynic ${stateDir}/skills/cynic
         ln -sfn ${skillsSrc}/watchdog ${stateDir}/skills/watchdog
         ln -sfn ${skillsSrc}/email ${stateDir}/skills/email
+        ln -sfn ${skillsSrc}/mcp ${stateDir}/skills/mcp
         ln -sfn ${skillsSrc}/cynic ${zeroclawDir}/workspace/skills/cynic
         ln -sfn ${skillsSrc}/watchdog ${zeroclawDir}/workspace/skills/watchdog
         ln -sfn ${skillsSrc}/email ${zeroclawDir}/workspace/skills/email
+        ln -sfn ${skillsSrc}/mcp ${zeroclawDir}/workspace/skills/mcp
 
         # Write config.toml
         cat > ${zeroclawDir}/config.toml << 'CONFIGEOF'
@@ -320,7 +328,7 @@ in
 
         # Tools available to ZeroClaw's shell execution
         # bash is required: ZeroClaw's shell tool runs `sh -c "command"`
-        path = with pkgs; [
+        path = (with pkgs; [
           bash
           coreutils
           findutils
@@ -334,7 +342,7 @@ in
           pciutils     # lspci
           systemd      # systemctl, journalctl
           util-linux   # lscpu, etc.
-        ];
+        ]) ++ cfg.extraPackages;
 
         serviceConfig = {
           Type = "simple";
@@ -353,6 +361,7 @@ in
           # Environment
           Environment = [
             "HOME=${stateDir}"
+            "MCP_GATEWAY_URL=https://axios-mcp-gateway.taile0fb4.ts.net"
           ];
           EnvironmentFile = "${zeroclawDir}/env";
 
