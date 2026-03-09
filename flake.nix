@@ -295,6 +295,163 @@
                   f.write(src)
               "
 
+              # 8.10. Pass original subject via thread_ts so replies get "Re: ..." subjects
+              ${pkgs.python3}/bin/python3 -c "
+              with open('src/channels/email_channel.rs', 'r') as f:
+                  src = f.read()
+
+              # In process_unseen: extract subject from content and set thread_ts
+              old = (
+                  '            let msg = ChannelMessage {\n'
+                  '                id: email.msg_id,\n'
+                  '                reply_target: email.sender.clone(),\n'
+                  '                sender: email.sender,\n'
+                  '                content: email.content,\n'
+                  '                channel: \"email\".to_string(),\n'
+                  '                timestamp: email.timestamp,\n'
+                  '                thread_ts: None,\n'
+                  '            };'
+              )
+              new = (
+                  '            // Extract subject for reply threading\n'
+                  '            let _email_subj = if email.content.starts_with(\"Subject: \") {\n'
+                  '                email.content.lines().next()\n'
+                  '                    .map(|l| l.trim_start_matches(\"Subject: \").to_string())\n'
+                  '            } else {\n'
+                  '                None\n'
+                  '            };\n'
+                  '            let msg = ChannelMessage {\n'
+                  '                id: email.msg_id,\n'
+                  '                reply_target: email.sender.clone(),\n'
+                  '                sender: email.sender,\n'
+                  '                content: email.content,\n'
+                  '                channel: \"email\".to_string(),\n'
+                  '                timestamp: email.timestamp,\n'
+                  '                thread_ts: _email_subj,\n'
+                  '            };'
+              )
+              assert old in src, f'Could not find ChannelMessage creation in process_unseen'
+              src = src.replace(old, new, 1)
+
+              # In send(): use thread_ts as Re: subject fallback before 'ZeroClaw Message'
+              old_send = (
+                  '        // Use explicit subject if provided, otherwise fall back to legacy parsing or default\n'
+                  '        let (subject, body) = if let Some(ref subj) = message.subject {\n'
+                  '            (subj.as_str(), message.content.as_str())\n'
+                  '        } else if message.content.starts_with(\"Subject: \") {\n'
+                  '            if let Some(pos) = message.content.find(' + chr(39) + chr(92) + 'n' + chr(39) + ') {\n'
+                  '                (&message.content[9..pos], message.content[pos + 1..].trim())\n'
+                  '            } else {\n'
+                  '                (\"ZeroClaw Message\", message.content.as_str())\n'
+                  '            }\n'
+                  '        } else {\n'
+                  '            (\"ZeroClaw Message\", message.content.as_str())\n'
+                  '        };'
+              )
+              new_send = (
+                  '        // Use explicit subject if provided, otherwise fall back to legacy parsing,\n'
+                  '        // thread subject (for email replies), or default\n'
+                  '        let _thread_subject;\n'
+                  '        let (subject, body) = if let Some(ref subj) = message.subject {\n'
+                  '            (subj.as_str(), message.content.as_str())\n'
+                  '        } else if message.content.starts_with(\"Subject: \") {\n'
+                  '            if let Some(pos) = message.content.find(' + chr(39) + chr(92) + 'n' + chr(39) + ') {\n'
+                  '                (&message.content[9..pos], message.content[pos + 1..].trim())\n'
+                  '            } else {\n'
+                  '                (\"ZeroClaw Message\", message.content.as_str())\n'
+                  '            }\n'
+                  '        } else if let Some(ref ts) = message.thread_ts {\n'
+                  '            _thread_subject = if ts.starts_with(\"Re: \") {\n'
+                  '                ts.clone()\n'
+                  '            } else {\n'
+                  '                format!(\"Re: {}\", ts)\n'
+                  '            };\n'
+                  '            (_thread_subject.as_str(), message.content.as_str())\n'
+                  '        } else {\n'
+                  '            (\"ZeroClaw Message\", message.content.as_str())\n'
+                  '        };'
+              )
+              assert old_send in src, f'Could not find subject determination in send()'
+              src = src.replace(old_send, new_send, 1)
+
+              with open('src/channels/email_channel.rs', 'w') as f:
+                  f.write(src)
+              "
+
+              # 8.11. Save sent emails to IMAP Sent folder (best-effort)
+              ${pkgs.python3}/bin/python3 -c "
+              with open('src/channels/email_channel.rs', 'r') as f:
+                  src = f.read()
+
+              # Add sent_folder field to EmailConfig
+              old_cfg = (
+                  '    /// Allowed sender addresses/domains (empty = deny all, [\"*\"] = allow all)\n'
+                  '    #[serde(default)]\n'
+                  '    pub allowed_senders: Vec<String>,'
+              )
+              new_cfg = (
+                  '    /// Allowed sender addresses/domains (empty = deny all, [\"*\"] = allow all)\n'
+                  '    #[serde(default)]\n'
+                  '    pub allowed_senders: Vec<String>,\n'
+                  '    /// IMAP folder name for saving sent messages (default: \"Sent\")\n'
+                  '    #[serde(default = \"default_sent_folder\")]\n'
+                  '    pub sent_folder: String,'
+              )
+              assert old_cfg in src, f'Could not find allowed_senders in EmailConfig'
+              src = src.replace(old_cfg, new_cfg, 1)
+
+              # Add default_sent_folder function
+              old_fn = 'fn default_true() -> bool {\n    true\n}'
+              new_fn = (
+                  'fn default_true() -> bool {\n'
+                  '    true\n'
+                  '}\n'
+                  'fn default_sent_folder() -> String {\n'
+                  '    \"Sent\".into()\n'
+                  '}'
+              )
+              assert old_fn in src, f'Could not find default_true function'
+              src = src.replace(old_fn, new_fn, 1)
+
+              # Add sent_folder to Default impl
+              old_default = '            allowed_senders: Vec::new(),\n        }'
+              new_default = '            allowed_senders: Vec::new(),\n            sent_folder: default_sent_folder(),\n        }'
+              assert old_default in src, f'Could not find allowed_senders in Default impl'
+              src = src.replace(old_default, new_default, 1)
+
+              # After SMTP send, append to Sent folder via IMAP
+              old_sent = '        info!(\"Email sent to {}\", message.recipient);\n        Ok(())\n    }'
+              new_sent = (
+                  '        info!(\"Email sent to {}\", message.recipient);\n'
+                  '\n'
+                  '        // Save copy to IMAP Sent folder (best-effort, non-fatal)\n'
+                  '        if !self.config.sent_folder.is_empty() {\n'
+                  '            let raw_email = email.formatted();\n'
+                  '            match self.connect_imap().await {\n'
+                  '                Ok(mut imap_session) => {\n'
+                  '                    match imap_session\n'
+                  '                        .append(&self.config.sent_folder, Some(' + chr(34) + chr(92) + chr(92) + 'Seen' + chr(34) + '), None, &raw_email)\n'
+                  '                        .await\n'
+                  '                    {\n'
+                  '                        Ok(_) => debug!(\"Saved to {} folder\", self.config.sent_folder),\n'
+                  '                        Err(e) => warn!(\"Failed to save to {}: {}\", self.config.sent_folder, e),\n'
+                  '                    }\n'
+                  '                    let _ = imap_session.logout().await;\n'
+                  '                }\n'
+                  '                Err(e) => warn!(\"IMAP connect for Sent save failed: {}\", e),\n'
+                  '            }\n'
+                  '        }\n'
+                  '\n'
+                  '        Ok(())\n'
+                  '    }'
+              )
+              assert old_sent in src, f'Could not find send() Ok return'
+              src = src.replace(old_sent, new_sent, 1)
+
+              with open('src/channels/email_channel.rs', 'w') as f:
+                  f.write(src)
+              "
+
               # ── Image vision: patch Anthropic provider for Claude vision API ──
 
               # 9. Add ImageSource struct + Image variant to NativeContentOut
