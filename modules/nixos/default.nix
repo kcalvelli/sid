@@ -139,6 +139,18 @@ in
       description = "Extra packages to add to the ZeroClaw service PATH";
     };
 
+    mcpGatewayUrl = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = "MCP Gateway URL for mcp-gw CLI (wraps mcp-gw with baked-in URL)";
+    };
+
+    mcpGatewayPackage = lib.mkOption {
+      type = lib.types.nullOr lib.types.package;
+      default = null;
+      description = "The mcp-gateway package providing mcp-gw CLI";
+    };
+
     port = lib.mkOption {
       type = lib.types.port;
       default = 18789;
@@ -342,7 +354,17 @@ in
           pciutils     # lspci
           systemd      # systemctl, journalctl
           util-linux   # lscpu, etc.
-        ]) ++ cfg.extraPackages;
+        ]) ++ cfg.extraPackages
+           ++ lib.optional (cfg.mcpGatewayPackage != null) (
+             if cfg.mcpGatewayUrl != null then
+               # Wrapper with baked-in URL (ZeroClaw sanitizes env from subprocesses)
+               pkgs.writeShellScriptBin "mcp-gw" ''
+                 export MCP_GATEWAY_URL=${lib.escapeShellArg cfg.mcpGatewayUrl}
+                 exec ${cfg.mcpGatewayPackage}/bin/mcp-gw "$@"
+               ''
+             else
+               cfg.mcpGatewayPackage
+           );
 
         serviceConfig = {
           Type = "simple";
@@ -361,7 +383,6 @@ in
           # Environment
           Environment = [
             "HOME=${stateDir}"
-            "MCP_GATEWAY_URL=https://axios-mcp-gateway.taile0fb4.ts.net"
           ];
           EnvironmentFile = "${zeroclawDir}/env";
 
