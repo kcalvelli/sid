@@ -263,6 +263,38 @@
                   f.write(src)
               "
 
+              # ── Email self-loop prevention: skip emails from own address ──
+
+              # 8.9. Patch email_channel.rs to ignore emails sent by self (prevents reply loops)
+              ${pkgs.python3}/bin/python3 -c "
+              with open('src/channels/email_channel.rs', 'r') as f:
+                  src = f.read()
+              old = (
+                  '            // Check allowlist\n'
+                  '            if !self.is_sender_allowed(&email.sender) {\n'
+                  '                warn!(\"Blocked email from {}\", email.sender);\n'
+                  '                continue;\n'
+                  '            }'
+              )
+              new = (
+                  '            // Check allowlist\n'
+                  '            if !self.is_sender_allowed(&email.sender) {\n'
+                  '                warn!(\"Blocked email from {}\", email.sender);\n'
+                  '                continue;\n'
+                  '            }\n'
+                  '\n'
+                  '            // Skip emails from self (prevent reply loops)\n'
+                  '            if email.sender.eq_ignore_ascii_case(&self.config.from_address) {\n'
+                  '                info!(\"Ignoring email from self ({})\", email.sender);\n'
+                  '                continue;\n'
+                  '            }'
+              )
+              assert old in src, f'Could not find allowlist check in email_channel.rs'
+              src = src.replace(old, new, 1)
+              with open('src/channels/email_channel.rs', 'w') as f:
+                  f.write(src)
+              "
+
               # ── Image vision: patch Anthropic provider for Claude vision API ──
 
               # 9. Add ImageSource struct + Image variant to NativeContentOut
