@@ -1,0 +1,126 @@
+From 39c0f1694ece8419ea1c0945e078f93857732f7c Mon Sep 17 00:00:00 2001
+From: Keith Calvelli <keith@calvelli.dev>
+Date: Tue, 10 Mar 2026 16:22:47 -0400
+Subject: [PATCH 10/10] feat: add Claude vision API support for image content
+ blocks
+
+Add ImageSource struct and Image variant to NativeContentOut for
+base64-encoded image content blocks. Declare vision capability on
+AnthropicProvider. Parse [IMAGE:data:mime;base64,...] markers in
+user messages into multi-content blocks with text and image parts.
+---
+ src/providers/anthropic.rs | 63 +++++++++++++++++++++++++++++++++++---
+ 1 file changed, 59 insertions(+), 4 deletions(-)
+
+diff --git a/src/providers/anthropic.rs b/src/providers/anthropic.rs
+index 45e9f18b..6cf52181 100644
+--- a/src/providers/anthropic.rs
++++ b/src/providers/anthropic.rs
+@@ -59,6 +59,14 @@ struct NativeMessage {
+     content: Vec<NativeContentOut>,
+ }
+ 
++#[derive(Debug, Serialize)]
++struct ImageSource {
++    #[serde(rename = "type")]
++    source_type: String,
++    media_type: String,
++    data: String,
++}
++
+ #[derive(Debug, Serialize)]
+ #[serde(tag = "type")]
+ enum NativeContentOut {
+@@ -83,6 +91,10 @@ enum NativeContentOut {
+         #[serde(skip_serializing_if = "Option::is_none")]
+         cache_control: Option<CacheControl>,
+     },
++    #[serde(rename = "image")]
++    Image {
++        source: ImageSource,
++    },
+ }
+ 
+ #[derive(Debug, Serialize)]
+@@ -211,6 +223,7 @@ impl AnthropicProvider {
+                         *cache_control = Some(CacheControl::ephemeral());
+                     }
+                     NativeContentOut::ToolUse { .. } => {}
++                    NativeContentOut::Image { .. } => {}
+                 }
+             }
+         }
+@@ -291,6 +304,44 @@ impl AnthropicProvider {
+         })
+     }
+ 
++    /// Parse a data URI (data:mime;base64,payload) into an ImageSource.
++    fn parse_data_uri_image(data_uri: &str) -> Option<ImageSource> {
++        let rest = data_uri.strip_prefix("data:")?;
++        let (mime, payload) = rest.split_once(";base64,")?;
++        if mime.is_empty() || payload.is_empty() {
++            return None;
++        }
++        Some(ImageSource {
++            source_type: "base64".to_string(),
++            media_type: mime.to_string(),
++            data: payload.to_string(),
++        })
++    }
++
++    /// Build content blocks from a message that may contain [IMAGE:data:...] markers.
++    fn build_user_content_blocks(content: &str) -> Vec<NativeContentOut> {
++        let (text, image_refs) = crate::multimodal::parse_image_markers(content);
++        let mut blocks = Vec::new();
++        if !text.is_empty() {
++            blocks.push(NativeContentOut::Text {
++                text,
++                cache_control: None,
++            });
++        }
++        for img_ref in &image_refs {
++            if let Some(source) = Self::parse_data_uri_image(img_ref) {
++                blocks.push(NativeContentOut::Image { source });
++            }
++        }
++        if blocks.is_empty() {
++            blocks.push(NativeContentOut::Text {
++                text: content.to_string(),
++                cache_control: None,
++            });
++        }
++        blocks
++    }
++
+     fn convert_messages(messages: &[ChatMessage]) -> (Option<SystemPrompt>, Vec<NativeMessage>) {
+         let mut system_text = None;
+         let mut native_messages = Vec::new();
+@@ -334,10 +385,7 @@ impl AnthropicProvider {
+                 _ => {
+                     native_messages.push(NativeMessage {
+                         role: "user".to_string(),
+-                        content: vec![NativeContentOut::Text {
+-                            text: msg.content.clone(),
+-                            cache_control: None,
+-                        }],
++                        content: Self::build_user_content_blocks(&msg.content),
+                     });
+                 }
+             }
+@@ -423,6 +471,13 @@ impl AnthropicProvider {
+ 
+ #[async_trait]
+ impl Provider for AnthropicProvider {
++    fn capabilities(&self) -> crate::providers::traits::ProviderCapabilities {
++        crate::providers::traits::ProviderCapabilities {
++            native_tool_calling: true,
++            vision: true,
++        }
++    }
++
+     async fn chat_with_system(
+         &self,
+         system_prompt: Option<&str>,
+-- 
+2.53.0
+

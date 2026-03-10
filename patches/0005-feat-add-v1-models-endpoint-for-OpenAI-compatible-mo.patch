@@ -1,0 +1,39 @@
+From aa58523f3d6776b9b746e5ed1171665063786fff Mon Sep 17 00:00:00 2001
+From: Keith Calvelli <keith@calvelli.dev>
+Date: Tue, 10 Mar 2026 15:49:11 -0400
+Subject: [PATCH 05/10] feat: add /v1/models endpoint for OpenAI-compatible
+ model discovery
+
+Static endpoint returning a single model entry for HA and client
+discovery. No authentication required.
+---
+ src/gateway/mod.rs | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/src/gateway/mod.rs b/src/gateway/mod.rs
+index c1f143ae..42d4ecfc 100644
+--- a/src/gateway/mod.rs
++++ b/src/gateway/mod.rs
+@@ -657,6 +657,7 @@ pub async fn run_gateway(host: &str, port: u16, config: Config) -> Result<()> {
+     let app = Router::new()
+         // ── Existing routes ──
+         .route("/health", get(handle_health))
++        .route("/v1/models", get(handle_models))
+         .route("/metrics", get(handle_metrics))
+         .route("/pair", post(handle_pair))
+         .route("/webhook", post(handle_webhook))
+@@ -874,6 +875,11 @@ pub struct WebhookBody {
+ }
+ 
+ /// POST /webhook — main webhook endpoint
++async fn handle_models() -> impl axum::response::IntoResponse {
++    ([("content-type", "application/json")],
++     r#"{"object":"list","data":[{"id":"sid","object":"model"}]}"#)
++}
++
+ async fn handle_webhook(
+     State(state): State<AppState>,
+     ConnectInfo(peer_addr): ConnectInfo<SocketAddr>,
+-- 
+2.53.0
+

@@ -1,0 +1,33 @@
+From 99c1bcc0408f367fbd4d79bf01911e04570765bd Mon Sep 17 00:00:00 2001
+From: Keith Calvelli <keith@calvelli.dev>
+Date: Tue, 10 Mar 2026 16:15:03 -0400
+Subject: [PATCH 07/10] fix: skip emails from own address to prevent reply
+ loops
+
+After the allowlist check, compare the sender address (case-insensitive)
+against from_address. If they match, log and skip to prevent the agent
+from responding to its own outbound emails.
+---
+ src/channels/email_channel.rs | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/src/channels/email_channel.rs b/src/channels/email_channel.rs
+index 147dffea..f57a5213 100644
+--- a/src/channels/email_channel.rs
++++ b/src/channels/email_channel.rs
+@@ -444,6 +444,12 @@ impl EmailChannel {
+                 continue;
+             }
+ 
++            // Skip emails from self (prevent reply loops)
++            if email.sender.eq_ignore_ascii_case(&self.config.from_address) {
++                info!("Ignoring email from self ({})", email.sender);
++                continue;
++            }
++
+             let is_new = {
+                 let mut seen = self.seen_messages.lock().await;
+                 seen.insert(email.msg_id.clone())
+-- 
+2.53.0
+

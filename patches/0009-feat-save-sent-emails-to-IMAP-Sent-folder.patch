@@ -1,0 +1,73 @@
+From 58a28b042a6e6e8c0fb9db5d8a4eb2a7b2fe20d6 Mon Sep 17 00:00:00 2001
+From: Keith Calvelli <keith@calvelli.dev>
+Date: Tue, 10 Mar 2026 16:18:28 -0400
+Subject: [PATCH 09/10] feat: save sent emails to IMAP Sent folder
+
+Add sent_folder config field (default: "Sent") to EmailConfig.
+After successful SMTP send, append the raw email to the configured
+IMAP folder with \Seen flag. Failures are logged but non-fatal.
+---
+ src/channels/email_channel.rs | 26 ++++++++++++++++++++++++++
+ 1 file changed, 26 insertions(+)
+
+diff --git a/src/channels/email_channel.rs b/src/channels/email_channel.rs
+index 8bd23e4c..5b16f645 100644
+--- a/src/channels/email_channel.rs
++++ b/src/channels/email_channel.rs
+@@ -67,6 +67,9 @@ pub struct EmailConfig {
+     /// Allowed sender addresses/domains (empty = deny all, ["*"] = allow all)
+     #[serde(default)]
+     pub allowed_senders: Vec<String>,
++    /// IMAP folder name for saving sent messages (default: "Sent")
++    #[serde(default = "default_sent_folder")]
++    pub sent_folder: String,
+ }
+ 
+ impl crate::config::traits::ChannelConfig for EmailConfig {
+@@ -93,6 +96,9 @@ fn default_idle_timeout() -> u64 {
+ fn default_true() -> bool {
+     true
+ }
++fn default_sent_folder() -> String {
++    "Sent".into()
++}
+ 
+ impl Default for EmailConfig {
+     fn default() -> Self {
+@@ -108,6 +114,7 @@ impl Default for EmailConfig {
+             from_address: String::new(),
+             idle_timeout_secs: default_idle_timeout(),
+             allowed_senders: Vec::new(),
++            sent_folder: default_sent_folder(),
+         }
+     }
+ }
+@@ -555,6 +562,25 @@ impl Channel for EmailChannel {
+         let transport = self.create_smtp_transport()?;
+         transport.send(&email)?;
+         info!("Email sent to {}", message.recipient);
++
++        // Save copy to IMAP Sent folder (best-effort, non-fatal)
++        if !self.config.sent_folder.is_empty() {
++            let raw_email = email.formatted();
++            match self.connect_imap().await {
++                Ok(mut imap_session) => {
++                    match imap_session
++                        .append(&self.config.sent_folder, Some("\\Seen"), None, &raw_email)
++                        .await
++                    {
++                        Ok(_) => debug!("Saved to {} folder", self.config.sent_folder),
++                        Err(e) => warn!("Failed to save to {}: {}", self.config.sent_folder, e),
++                    }
++                    let _ = imap_session.logout().await;
++                }
++                Err(e) => warn!("IMAP connect for Sent save failed: {}", e),
++            }
++        }
++
+         Ok(())
+     }
+ 
+-- 
+2.53.0
+

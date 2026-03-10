@@ -1,0 +1,90 @@
+From 98ac3e8da8ca9e998d4c640ee9edc652491e9c59 Mon Sep 17 00:00:00 2001
+From: Keith Calvelli <keith@calvelli.dev>
+Date: Tue, 10 Mar 2026 15:48:16 -0400
+Subject: [PATCH 03/10] feat: wire XMPP channel into channel registry and
+ config schema
+
+Add xmpp module declaration and re-export in channels/mod.rs,
+XmppConfig field to ChannelsConfig in schema.rs, and conditional
+XMPP tool registration in tools/mod.rs. The actual xmpp.rs source
+is provided separately as a new file.
+---
+ src/channels/mod.rs  | 9 +++++++++
+ src/config/schema.rs | 3 +++
+ src/tools/mod.rs     | 5 +++++
+ 3 files changed, 17 insertions(+)
+
+diff --git a/src/channels/mod.rs b/src/channels/mod.rs
+index 6fd7063f..fb21f8ef 100644
+--- a/src/channels/mod.rs
++++ b/src/channels/mod.rs
+@@ -43,6 +43,7 @@ pub mod whatsapp;
+ pub mod whatsapp_storage;
+ #[cfg(feature = "whatsapp-web")]
+ pub mod whatsapp_web;
++pub mod xmpp;
+ 
+ pub use clawdtalk::{ClawdTalkChannel, ClawdTalkConfig};
+ pub use cli::CliChannel;
+@@ -68,6 +69,7 @@ pub use wati::WatiChannel;
+ pub use whatsapp::WhatsAppChannel;
+ #[cfg(feature = "whatsapp-web")]
+ pub use whatsapp_web::WhatsAppWebChannel;
++pub use xmpp::XmppChannel;
+ 
+ use crate::agent::loop_::{build_tool_instructions, run_tool_call_loop, scrub_credentials};
+ use crate::config::Config;
+@@ -2969,6 +2971,13 @@ fn collect_configured_channels(
+         });
+     }
+ 
++    if let Some(ref xmpp_cfg) = config.channels_config.xmpp {
++        channels.push(ConfiguredChannel {
++            display_name: "XMPP",
++            channel: Arc::new(XmppChannel::new(xmpp_cfg)),
++        });
++    }
++
+     channels
+ }
+ 
+diff --git a/src/config/schema.rs b/src/config/schema.rs
+index 6366a169..427bf8aa 100644
+--- a/src/config/schema.rs
++++ b/src/config/schema.rs
+@@ -2589,6 +2589,8 @@ pub struct ChannelsConfig {
+     pub nostr: Option<NostrConfig>,
+     /// ClawdTalk voice channel configuration.
+     pub clawdtalk: Option<crate::channels::clawdtalk::ClawdTalkConfig>,
++    /// XMPP channel configuration.
++    pub xmpp: Option<crate::channels::xmpp::XmppConfig>,
+     /// Base timeout in seconds for processing a single channel message (LLM + tools).
+     /// Runtime uses this as a per-turn budget that scales with tool-loop depth
+     /// (up to 4x, capped) so one slow/retried model call does not consume the
+@@ -2720,6 +2722,7 @@ impl Default for ChannelsConfig {
+             qq: None,
+             nostr: None,
+             clawdtalk: None,
++            xmpp: None,
+             message_timeout_secs: default_channel_message_timeout_secs(),
+         }
+     }
+diff --git a/src/tools/mod.rs b/src/tools/mod.rs
+index 0164bdda..a94f59f4 100644
+--- a/src/tools/mod.rs
++++ b/src/tools/mod.rs
+@@ -345,6 +345,11 @@ pub fn all_tools_with_runtime(
+         tool_arcs.push(Arc::new(delegate_tool));
+     }
+ 
++    // XMPP tools (conditionally registered when XMPP channel is configured)
++    if root_config.channels_config.xmpp.is_some() {
++        tool_arcs.extend(crate::channels::xmpp::xmpp_tools());
++    }
++
+     boxed_registry_from_arcs(tool_arcs)
+ }
+ 
+-- 
+2.53.0
+

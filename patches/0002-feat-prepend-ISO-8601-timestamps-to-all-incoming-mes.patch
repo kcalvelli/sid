@@ -1,0 +1,87 @@
+From 89bc526bfa5a8ddc81735e0838eb0a2ded73f5a2 Mon Sep 17 00:00:00 2001
+From: Keith Calvelli <keith@calvelli.dev>
+Date: Tue, 10 Mar 2026 15:45:16 -0400
+Subject: [PATCH 02/10] feat: prepend ISO-8601 timestamps to all incoming
+ messages
+
+Add local timestamps to channel messages (using ChannelMessage.timestamp),
+heartbeat prompts (using Local::now), and webhook messages (using Local::now).
+Format: [2026-01-15T10:30:00-05:00] <message content>
+---
+ src/channels/mod.rs | 8 +++++++-
+ src/daemon/mod.rs   | 4 ++--
+ src/gateway/mod.rs  | 4 +++-
+ 3 files changed, 12 insertions(+), 4 deletions(-)
+
+diff --git a/src/channels/mod.rs b/src/channels/mod.rs
+index 320e53e8..6fd7063f 100644
+--- a/src/channels/mod.rs
++++ b/src/channels/mod.rs
+@@ -14,6 +14,8 @@
+ //! To add a new channel, implement [`Channel`] in a new submodule and wire it into
+ //! [`start_channels`]. See `AGENTS.md` §7.2 for the full change playbook.
+ 
++use chrono::TimeZone;
++
+ pub mod clawdtalk;
+ pub mod cli;
+ pub mod dingtalk;
+@@ -1603,7 +1605,11 @@ async fn process_channel_message(
+         .is_some_and(|turns| !turns.is_empty());
+ 
+     // Preserve user turn before the LLM call so interrupted requests keep context.
+-    append_sender_turn(ctx.as_ref(), &history_key, ChatMessage::user(&msg.content));
++    let _ts = chrono::Local.timestamp_opt(msg.timestamp as i64, 0)
++        .single()
++        .unwrap_or_else(chrono::Local::now);
++    let _stamped_content = format!("[{}] {}", _ts.format("%Y-%m-%dT%H:%M:%S%:z"), msg.content);
++    append_sender_turn(ctx.as_ref(), &history_key, ChatMessage::user(&_stamped_content));
+ 
+     // Build history from per-sender conversation cache.
+     let prior_turns_raw = ctx
+diff --git a/src/daemon/mod.rs b/src/daemon/mod.rs
+index dbca0bec..14bedd82 100644
+--- a/src/daemon/mod.rs
++++ b/src/daemon/mod.rs
+@@ -1,6 +1,6 @@
+ use crate::config::Config;
+ use anyhow::Result;
+-use chrono::Utc;
++use chrono::{Local, Utc};
+ use std::future::Future;
+ use std::path::PathBuf;
+ use tokio::task::JoinHandle;
+@@ -196,7 +196,7 @@ async fn run_heartbeat_worker(config: Config) -> Result<()> {
+         }
+ 
+         for task in tasks {
+-            let prompt = format!("[Heartbeat Task] {task}");
++            let prompt = format!("[{}] [Heartbeat Task] {task}", chrono::Local::now().format("%Y-%m-%dT%H:%M:%S%:z"));
+             let temp = config.default_temperature;
+             match crate::agent::run(
+                 config.clone(),
+diff --git a/src/gateway/mod.rs b/src/gateway/mod.rs
+index 26506e6d..48a809cc 100644
+--- a/src/gateway/mod.rs
++++ b/src/gateway/mod.rs
+@@ -12,6 +12,7 @@ pub mod sse;
+ pub mod static_files;
+ pub mod ws;
+ 
++use chrono::Local;
+ use crate::channels::{
+     Channel, LinqChannel, NextcloudTalkChannel, SendMessage, WatiChannel, WhatsAppChannel,
+ };
+@@ -829,7 +830,8 @@ async fn persist_pairing_tokens(config: Arc<Mutex<Config>>, pairing: &PairingGua
+ 
+ /// Simple chat for webhook endpoint (no tools, for backward compatibility and testing).
+ async fn run_gateway_chat_simple(state: &AppState, message: &str) -> anyhow::Result<String> {
+-    let user_messages = vec![ChatMessage::user(message)];
++    let _stamped = format!("[{}] {}", chrono::Local::now().format("%Y-%m-%dT%H:%M:%S%:z"), message);
++    let user_messages = vec![ChatMessage::user(&_stamped)];
+ 
+     // Keep webhook/gateway prompts aligned with channel behavior by injecting
+     // workspace-aware system context before model invocation.
+-- 
+2.53.0
+
