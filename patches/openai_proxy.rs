@@ -325,29 +325,6 @@ pub async fn handle_chat_completions(
         }
     };
 
-    // Log incoming request for debugging HA tool definitions
-    tracing::info!(
-        "/v1/chat/completions request: model={:?}, stream={:?}, tools={}, messages={}",
-        req.model,
-        req.stream,
-        req.tools.as_ref().map(|t| {
-            let names: Vec<&str> = t.iter().map(|tool| tool.function.name.as_str()).collect();
-            format!("{names:?}")
-        }).unwrap_or_else(|| "none".to_string()),
-        req.messages.len(),
-    );
-    if let Some(ref tools) = req.tools {
-        for tool in tools {
-            tracing::debug!(
-                "  tool: {} — params: {}",
-                tool.function.name,
-                tool.function.parameters.as_ref()
-                    .map(|p| serde_json::to_string(p).unwrap_or_default())
-                    .unwrap_or_else(|| "none".to_string()),
-            );
-        }
-    }
-
     let auth = match get_auth() {
         Ok(a) => a,
         Err(msg) => {
