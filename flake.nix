@@ -44,6 +44,7 @@
               ./patches/0008-feat-preserve-email-subject-in-reply-threading.patch
               ./patches/0009-feat-save-sent-emails-to-IMAP-Sent-folder.patch
               ./patches/0010-feat-add-Claude-vision-API-support-for-image-content.patch
+              ./patches/0011-fix-prevent-empty-text-content-blocks-in-API-request.patch
             ];
 
             postPatch = ''

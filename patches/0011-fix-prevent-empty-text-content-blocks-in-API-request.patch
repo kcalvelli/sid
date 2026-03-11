@@ -1,0 +1,48 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Keith Calvelli <keith@calvelli.dev>
+Date: Tue, 11 Mar 2026 12:00:00 -0400
+Subject: [PATCH 11/11] fix: prevent empty text content blocks in API requests
+
+Guard against empty msg.content in the assistant and tool fallback
+branches of convert_messages. The Anthropic API rejects requests
+containing empty text content blocks with 400 Bad Request.
+---
+ src/providers/anthropic.rs | 16 ++++++++++++----
+ 1 file changed, 12 insertions(+), 4 deletions(-)
+
+diff --git a/src/providers/anthropic.rs b/src/providers/anthropic.rs
+--- a/src/providers/anthropic.rs
++++ b/src/providers/anthropic.rs
+@@ -368,8 +368,12 @@ impl AnthropicProvider {
+                     } else {
+                         native_messages.push(NativeMessage {
+                             role: "assistant".to_string(),
+-                            content: vec![NativeContentOut::Text {
+-                                text: msg.content.clone(),
++                            content: vec![NativeContentOut::Text {
++                                text: if msg.content.is_empty() {
++                                    "(empty)".to_string()
++                                } else {
++                                    msg.content.clone()
++                                },
+                                 cache_control: None,
+                             }],
+                         });
+@@ -382,8 +386,12 @@ impl AnthropicProvider {
+                     } else {
+                         native_messages.push(NativeMessage {
+                             role: "user".to_string(),
+-                            content: vec![NativeContentOut::Text {
+-                                text: msg.content.clone(),
++                            content: vec![NativeContentOut::Text {
++                                text: if msg.content.is_empty() {
++                                    "(empty)".to_string()
++                                } else {
++                                    msg.content.clone()
++                                },
+                                 cache_control: None,
+                             }],
+                         });
+--
+2.53.0
+
