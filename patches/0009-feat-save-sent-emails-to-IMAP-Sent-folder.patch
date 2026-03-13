@@ -1,6 +1,6 @@
-From 58a28b042a6e6e8c0fb9db5d8a4eb2a7b2fe20d6 Mon Sep 17 00:00:00 2001
+From e1848f6212cc0d4f3998a72cd6b6bdf17f86f805 Mon Sep 17 00:00:00 2001
 From: Keith Calvelli <keith@calvelli.dev>
-Date: Tue, 10 Mar 2026 16:18:28 -0400
+Date: Fri, 13 Mar 2026 10:02:51 -0400
 Subject: [PATCH 09/10] feat: save sent emails to IMAP Sent folder
 
 Add sent_folder config field (default: "Sent") to EmailConfig.
@@ -11,22 +11,22 @@ IMAP folder with \Seen flag. Failures are logged but non-fatal.
  1 file changed, 26 insertions(+)
 
 diff --git a/src/channels/email_channel.rs b/src/channels/email_channel.rs
-index 8bd23e4c..5b16f645 100644
+index 8cd0c36..5b568e6 100644
 --- a/src/channels/email_channel.rs
 +++ b/src/channels/email_channel.rs
-@@ -67,6 +67,9 @@ pub struct EmailConfig {
-     /// Allowed sender addresses/domains (empty = deny all, ["*"] = allow all)
-     #[serde(default)]
-     pub allowed_senders: Vec<String>,
+@@ -70,6 +70,9 @@ pub struct EmailConfig {
+     /// Default subject line for outgoing emails (default: "ZeroClaw Message")
+     #[serde(default = "default_subject")]
+     pub default_subject: String,
 +    /// IMAP folder name for saving sent messages (default: "Sent")
 +    #[serde(default = "default_sent_folder")]
 +    pub sent_folder: String,
  }
  
  impl crate::config::traits::ChannelConfig for EmailConfig {
-@@ -93,6 +96,9 @@ fn default_idle_timeout() -> u64 {
- fn default_true() -> bool {
-     true
+@@ -99,6 +102,9 @@ fn default_true() -> bool {
+ fn default_subject() -> String {
+     "ZeroClaw Message".into()
  }
 +fn default_sent_folder() -> String {
 +    "Sent".into()
@@ -34,15 +34,15 @@ index 8bd23e4c..5b16f645 100644
  
  impl Default for EmailConfig {
      fn default() -> Self {
-@@ -108,6 +114,7 @@ impl Default for EmailConfig {
-             from_address: String::new(),
+@@ -115,6 +121,7 @@ impl Default for EmailConfig {
              idle_timeout_secs: default_idle_timeout(),
              allowed_senders: Vec::new(),
+             default_subject: default_subject(),
 +            sent_folder: default_sent_folder(),
          }
      }
  }
-@@ -555,6 +562,25 @@ impl Channel for EmailChannel {
+@@ -563,6 +570,25 @@ impl Channel for EmailChannel {
          let transport = self.create_smtp_transport()?;
          transport.send(&email)?;
          info!("Email sent to {}", message.recipient);

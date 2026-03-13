@@ -1,6 +1,6 @@
-From c923d4a6f25d6de746c26ddf2195453f2bece8a6 Mon Sep 17 00:00:00 2001
+From 50218f0209acfebc0113a68def8cd8855ce0e28e Mon Sep 17 00:00:00 2001
 From: Keith Calvelli <keith@calvelli.dev>
-Date: Tue, 10 Mar 2026 16:16:09 -0400
+Date: Fri, 13 Mar 2026 09:59:21 -0400
 Subject: [PATCH 08/10] feat: preserve email subject in reply threading
 
 Extract subject from incoming emails into thread_ts field on
@@ -11,10 +11,10 @@ with 'Re: ' prefix if no explicit subject is provided.
  1 file changed, 18 insertions(+), 2 deletions(-)
 
 diff --git a/src/channels/email_channel.rs b/src/channels/email_channel.rs
-index f57a5213..8bd23e4c 100644
+index bac22b4..8cd0c36 100644
 --- a/src/channels/email_channel.rs
 +++ b/src/channels/email_channel.rs
-@@ -458,6 +458,13 @@ impl EmailChannel {
+@@ -465,6 +465,13 @@ impl EmailChannel {
                  continue;
              }
  
@@ -28,7 +28,7 @@ index f57a5213..8bd23e4c 100644
              let msg = ChannelMessage {
                  id: email.msg_id,
                  reply_target: email.sender.clone(),
-@@ -465,7 +472,7 @@ impl EmailChannel {
+@@ -472,7 +479,7 @@ impl EmailChannel {
                  content: email.content,
                  channel: "email".to_string(),
                  timestamp: email.timestamp,
@@ -37,20 +37,21 @@ index f57a5213..8bd23e4c 100644
              };
  
              if tx.send(msg).await.is_err() {
-@@ -517,7 +524,9 @@ impl Channel for EmailChannel {
+@@ -524,8 +531,10 @@ impl Channel for EmailChannel {
      }
  
      async fn send(&self, message: &SendMessage) -> Result<()> {
 -        // Use explicit subject if provided, otherwise fall back to legacy parsing or default
 +        // Use explicit subject if provided, otherwise fall back to legacy parsing,
 +        // thread subject (for email replies), or default
+         let default_subject = self.config.default_subject.as_str();
 +        let _thread_subject;
          let (subject, body) = if let Some(ref subj) = message.subject {
              (subj.as_str(), message.content.as_str())
          } else if message.content.starts_with("Subject: ") {
-@@ -526,6 +535,13 @@ impl Channel for EmailChannel {
+@@ -534,6 +543,13 @@ impl Channel for EmailChannel {
              } else {
-                 ("ZeroClaw Message", message.content.as_str())
+                 (default_subject, message.content.as_str())
              }
 +        } else if let Some(ref ts) = message.thread_ts {
 +            _thread_subject = if ts.starts_with("Re: ") {
@@ -60,7 +61,7 @@ index f57a5213..8bd23e4c 100644
 +            };
 +            (_thread_subject.as_str(), message.content.as_str())
          } else {
-             ("ZeroClaw Message", message.content.as_str())
+             (default_subject, message.content.as_str())
          };
 -- 
 2.53.0

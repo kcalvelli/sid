@@ -1,12 +1,12 @@
-From 89bc526bfa5a8ddc81735e0838eb0a2ded73f5a2 Mon Sep 17 00:00:00 2001
+From a3965e3d7a7521f57d55876e800a81078e811c77 Mon Sep 17 00:00:00 2001
 From: Keith Calvelli <keith@calvelli.dev>
-Date: Tue, 10 Mar 2026 15:45:16 -0400
+Date: Fri, 13 Mar 2026 09:35:55 -0400
 Subject: [PATCH 02/10] feat: prepend ISO-8601 timestamps to all incoming
  messages
 
-Add local timestamps to channel messages (using ChannelMessage.timestamp),
-heartbeat prompts (using Local::now), and webhook messages (using Local::now).
-Format: [2026-01-15T10:30:00-05:00] <message content>
+Adds current UTC timestamp prefix to messages from all channels
+(heartbeat, webhook, email, Telegram, etc.) so the agent always
+knows when a message arrived.
 ---
  src/channels/mod.rs | 8 +++++++-
  src/daemon/mod.rs   | 4 ++--
@@ -14,7 +14,7 @@ Format: [2026-01-15T10:30:00-05:00] <message content>
  3 files changed, 12 insertions(+), 4 deletions(-)
 
 diff --git a/src/channels/mod.rs b/src/channels/mod.rs
-index 320e53e8..6fd7063f 100644
+index 76b6f7e..476e418 100644
 --- a/src/channels/mod.rs
 +++ b/src/channels/mod.rs
 @@ -14,6 +14,8 @@
@@ -26,7 +26,7 @@ index 320e53e8..6fd7063f 100644
  pub mod clawdtalk;
  pub mod cli;
  pub mod dingtalk;
-@@ -1603,7 +1605,11 @@ async fn process_channel_message(
+@@ -1746,7 +1748,11 @@ async fn process_channel_message(
          .is_some_and(|turns| !turns.is_empty());
  
      // Preserve user turn before the LLM call so interrupted requests keep context.
@@ -40,7 +40,7 @@ index 320e53e8..6fd7063f 100644
      // Build history from per-sender conversation cache.
      let prior_turns_raw = ctx
 diff --git a/src/daemon/mod.rs b/src/daemon/mod.rs
-index dbca0bec..14bedd82 100644
+index 8083889..b235869 100644
 --- a/src/daemon/mod.rs
 +++ b/src/daemon/mod.rs
 @@ -1,6 +1,6 @@
@@ -51,7 +51,7 @@ index dbca0bec..14bedd82 100644
  use std::future::Future;
  use std::path::PathBuf;
  use tokio::task::JoinHandle;
-@@ -196,7 +196,7 @@ async fn run_heartbeat_worker(config: Config) -> Result<()> {
+@@ -225,7 +225,7 @@ async fn run_heartbeat_worker(config: Config) -> Result<()> {
          }
  
          for task in tasks {
@@ -61,7 +61,7 @@ index dbca0bec..14bedd82 100644
              match crate::agent::run(
                  config.clone(),
 diff --git a/src/gateway/mod.rs b/src/gateway/mod.rs
-index 26506e6d..48a809cc 100644
+index 176bfa0..47785b3 100644
 --- a/src/gateway/mod.rs
 +++ b/src/gateway/mod.rs
 @@ -12,6 +12,7 @@ pub mod sse;
@@ -72,7 +72,7 @@ index 26506e6d..48a809cc 100644
  use crate::channels::{
      Channel, LinqChannel, NextcloudTalkChannel, SendMessage, WatiChannel, WhatsAppChannel,
  };
-@@ -829,7 +830,8 @@ async fn persist_pairing_tokens(config: Arc<Mutex<Config>>, pairing: &PairingGua
+@@ -847,7 +848,8 @@ async fn persist_pairing_tokens(config: Arc<Mutex<Config>>, pairing: &PairingGua
  
  /// Simple chat for webhook endpoint (no tools, for backward compatibility and testing).
  async fn run_gateway_chat_simple(state: &AppState, message: &str) -> anyhow::Result<String> {

@@ -1,21 +1,20 @@
-From 99c1bcc0408f367fbd4d79bf01911e04570765bd Mon Sep 17 00:00:00 2001
+From ab4fc21d328e810e6e7f0b1d8194ec2b694a0014 Mon Sep 17 00:00:00 2001
 From: Keith Calvelli <keith@calvelli.dev>
-Date: Tue, 10 Mar 2026 16:15:03 -0400
+Date: Fri, 13 Mar 2026 09:57:42 -0400
 Subject: [PATCH 07/10] fix: skip emails from own address to prevent reply
  loops
 
-After the allowlist check, compare the sender address (case-insensitive)
-against from_address. If they match, log and skip to prevent the agent
-from responding to its own outbound emails.
+Filter out messages sent from the bot's own email address in
+process_unseen to avoid processing self-replies.
 ---
  src/channels/email_channel.rs | 6 ++++++
  1 file changed, 6 insertions(+)
 
 diff --git a/src/channels/email_channel.rs b/src/channels/email_channel.rs
-index 147dffea..f57a5213 100644
+index 4e6f7c2..bac22b4 100644
 --- a/src/channels/email_channel.rs
 +++ b/src/channels/email_channel.rs
-@@ -444,6 +444,12 @@ impl EmailChannel {
+@@ -451,6 +451,12 @@ impl EmailChannel {
                  continue;
              }
  
