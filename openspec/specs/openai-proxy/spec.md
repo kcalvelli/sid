@@ -1,60 +1,43 @@
-# OpenAI-to-Anthropic Translation Proxy
+# OpenAI-Compatible Agent Proxy
 
 ## Purpose
 
-Provides an OpenAI-compatible `/v1/chat/completions` endpoint that translates requests to the Anthropic Messages API and streams responses back in OpenAI format. Designed for Home Assistant's `extended_openai_conversation` integration.
+Provides an OpenAI-compatible `/v1/chat/completions` endpoint backed by the full ZeroClaw agent loop. Home Assistant's `extended_openai_conversation` integration sends OpenAI Chat Completions format requests; the proxy routes them through `crate::agent::process_message()` for full tool, memory, and skill support, and returns responses in OpenAI format.
 
 ## Behavior
 
 ### Request Translation
 
-- OpenAI `messages` array → Anthropic `messages` + `system` prompt
-- System messages extracted and concatenated as Anthropic system prompt
-- Tool messages merged into single user message with `tool_result` content blocks (Anthropic requires alternating roles)
-- Assistant messages with `tool_calls` converted to `tool_use` content blocks
-- OpenAI `tools[].function` unwrapped; `parameters` renamed to `input_schema`
+The proxy extracts user content from the OpenAI `messages` array and passes it to the agent loop as a single message string. System messages are prepended as context. The `tools` field in the request is accepted but ignored — the agent uses its own tool registry. Assistant and tool messages in the history are ignored (agent manages its own conversation state).
 
 ### Identity Injection
 
 - `IDENTITY.md` read from workspace dir (`ZEROCLAW_WORKSPACE` env or `/var/lib/sid/.zeroclaw/workspace/`)
 - Cached with `OnceLock` (read once, reused)
-- Prepended to system prompt with separator
-
-### Auth
-
-- `ANTHROPIC_OAUTH_TOKEN` env var required
-- OAuth tokens (JWT or `sk-ant-oat01-` prefix): `Authorization: Bearer` + `anthropic-beta: oauth-2025-04-20`
-- API keys: `x-api-key` header
-
-### Model Override
-
-- Client-sent model ignored; uses `state.model` (configured Claude model)
+- Prepended to the message context passed to the agent
 
 ### Streaming (stream: true)
 
-SSE translation:
+Single-burst SSE: the agent's complete response emitted as a sequence of OpenAI Chat Completions chunks:
 
-| Anthropic Event | OpenAI Chunk |
+| Step | SSE Data |
 |---|---|
-| `message_start` | `delta: {"role": "assistant"}` |
-| `content_block_start` type=tool_use | `delta: {"tool_calls": [{"index": N, "id": ID, "type": "function", "function": {"name": NAME, "arguments": ""}}]}` |
-| `content_block_delta` text_delta | `delta: {"content": TEXT}` |
-| `content_block_delta` input_json_delta | `delta: {"tool_calls": [{"index": N, "function": {"arguments": PARTIAL}}]}` |
-| `message_delta` stop_reason=end_turn | `finish_reason: "stop"` |
-| `message_delta` stop_reason=tool_use | `finish_reason: "tool_calls"` |
-| `message_stop` | `data: [DONE]` |
+| 1 | `delta: {"role": "assistant"}` |
+| 2 | `delta: {"content": "<full response>"}` |
+| 3 | `finish_reason: "stop"` |
+| 4 | `data: [DONE]` |
+
+No token-by-token streaming — the full response is delivered in one burst.
 
 ### Non-streaming (stream: false or absent)
 
-Returns complete `ChatCompletion` object with choices array.
+Returns complete `ChatCompletion` JSON object with the agent's response in `choices[0].message.content`.
 
 ### Defaults
 
-- `max_tokens`: from request if present, default 4096
 - Body limit: 1MB (HA sends large entity lists)
 
 ### Error Handling
 
-- Missing `ANTHROPIC_OAUTH_TOKEN` → 500
-- Anthropic non-200 → return body as OpenAI error format
-- Connection failure → 502 Bad Gateway
+- Agent loop error → 500 with OpenAI error format
+- Invalid JSON request → 400 with OpenAI error format
