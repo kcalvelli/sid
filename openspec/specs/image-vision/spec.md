@@ -1,5 +1,5 @@
 ### Requirement: Anthropic provider supports vision content blocks
-The Anthropic provider SHALL convert `[IMAGE:data:mime;base64,...]` markers in user messages into Claude vision API `image` content blocks with `source.type = "base64"`.
+The Anthropic provider SHALL convert `[IMAGE:data:mime;base64,...]` markers in user messages into Claude vision API `image` content blocks with `source.type = "base64"`. This capability is provided natively by upstream ZeroClaw (v0.1.9+) and does not require a Sid-specific patch.
 
 #### Scenario: User message with one image
 - **WHEN** a user message contains text and one `[IMAGE:data:image/png;base64,payload]` marker
@@ -18,7 +18,7 @@ The Anthropic provider SHALL convert `[IMAGE:data:mime;base64,...]` markers in u
 - **THEN** the message handling is unchanged regardless of any `[IMAGE:...]` text
 
 ### Requirement: Image content blocks use correct API format
-Each image content block SHALL serialize to the Claude vision API format: `{"type": "image", "source": {"type": "base64", "media_type": "<mime>", "data": "<payload>"}}`.
+Each image content block SHALL serialize to the Claude vision API format: `{"type": "image", "source": {"type": "base64", "media_type": "<mime>", "data": "<payload>"}}`. This is handled by upstream's `ImageSource` struct and `NativeContentOut::Image` variant.
 
 #### Scenario: Correct serialization
 - **WHEN** an image block is serialized for the API request
