@@ -2,6 +2,54 @@
 
 You run as the `sid` system user with systemd hardening. Here's what you can actually do.
 
+## Security Model
+
+Your security boundary is the **systemd sandbox**, not a command whitelist. You can run any command available in your PATH, but the sandbox constrains what those commands can affect:
+
+- **ProtectSystem=strict** — filesystem is read-only except your state dir
+- **ProtectHome=tmpfs** — home directories are hidden
+- **CapabilityBoundingSet=""** — no elevated capabilities
+- **NoNewPrivileges=true** — can't escalate
+- **ReadWritePaths** — only `/var/lib/sid` is writable
+
+You have full autonomy (`allowed_commands = []`) — the sandbox is the guardrail. Use common sense about what's useful vs. wasteful.
+
+## Shell Tools in PATH
+
+Standard Unix tools available in your service namespace:
+
+| Tool | Package | Use |
+|------|---------|-----|
+| bash, coreutils | coreutils | Standard shell and file ops |
+| git | git | Version control |
+| grep, sed, awk | gnugrep, gnused, gawk | Text processing |
+| find | findutils | File search |
+| jq | jq | JSON processing |
+| curl | curl | HTTP requests (GET, POST, etc.) |
+| python3 | python3 | Scripting, data processing |
+| tar | gnutar | Archive handling |
+| gzip | gzip | Compression |
+| ping | inetutils | Network diagnostics |
+| dig, nslookup | dnsutils | DNS lookups |
+| file | file | File type detection |
+| tree | tree | Directory tree listing |
+| msmtp | msmtp | Outbound email |
+| free, uptime, ps | procps | System stats |
+| lspci | pciutils | Hardware info |
+| systemctl, journalctl | systemd | Service management (status/logs only) |
+| lscpu | util-linux | CPU info |
+| mcp-gw | mcp-gateway | MCP server access (calendar, email MCP) |
+
+## What You Cannot Access
+
+Even with commands available, the sandbox prevents:
+- Writing outside `/var/lib/sid`
+- Reading `/root`
+- Reading home directories (ProtectHome=tmpfs)
+- Modifying system config (ProtectSystem=strict)
+- Accessing secrets in `/run/agenix/`
+- Elevating privileges in any way
+
 ## Email
 
 You have your own email address: **genxbot@calvelli.us**
@@ -34,27 +82,6 @@ You have a native XMPP connection (when configured). Messages from XMPP arrive a
 - Responses are prefixed with the sender's nick
 - **Images** shared via OOB (XEP-0066) are downloaded and you can **see them** — describe, comment on, or respond to image content
 - PDFs and other files shared via OOB are downloaded and attached as file paths
-
-## Shell Execution
-
-You can run shell commands via ZeroClaw's exec tool. Commands execute in the sid user's systemd namespace.
-
-**What you have access to:**
-- `/proc/loadavg`, `/proc/cpuinfo`, `/proc/meminfo` (read-only)
-- `/var/lib/sid/workspace` directory (read-write)
-- Tools: git, ls, cat, grep, find, jq, msmtp, systemctl status, journalctl
-
-**What you cannot access:**
-- `/etc` directory
-- `/root` directory
-- `/proc` (beyond specific files above) and `/sys`
-- `~/.ssh`, `~/.gnupg`, `~/.aws`
-- Secrets in `/run/agenix/`
-- External network URLs via shell (use `web_fetch` tool instead)
-
-## File Operations
-
-Standard read/write/edit tools work within your `/var/lib/sid/workspace` directory.
 
 ## Web Fetch
 
@@ -95,6 +122,10 @@ You have a full cron/scheduling system. Use these tools to schedule recurring or
 - `agent` — run the AI agent with a prompt (has full tool access including `xmpp_send_message`)
 
 **Use for:** Morning messages, birthday reminders, periodic checks, anything on a timer.
+
+## File Operations
+
+Standard read/write/edit tools work within your `/var/lib/sid` directory.
 
 ## What's NOT Available
 

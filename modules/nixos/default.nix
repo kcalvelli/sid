@@ -99,8 +99,8 @@ let
     level = "full"
     workspace_only = false
     block_high_risk_commands = false
-    allowed_commands = ["git", "ls", "cat", "grep", "find", "head", "wc", "date", "df", "jq", "free", "lspci", "uptime", "nproc", "systemctl status", "journalctl", "msmtp", "printf", "mcp-gw"]
-    forbidden_paths = ["/etc", "/root", "/sys", "~/.ssh", "~/.gnupg", "~/.aws"]
+    allowed_commands = []
+    forbidden_paths = ["/root"]
     max_actions_per_hour = 60
     max_cost_per_day_cents = 1000
 
@@ -354,6 +354,14 @@ in
           pciutils     # lspci
           systemd      # systemctl, journalctl
           util-linux   # lscpu, etc.
+          curl         # HTTP requests
+          python3      # scripting
+          gnutar       # archives
+          gzip         # compression
+          inetutils    # ping
+          dnsutils     # dig, nslookup
+          file         # file type detection
+          tree         # directory listing
         ]) ++ cfg.extraPackages
            ++ lib.optional (cfg.mcpGatewayPackage != null) (
              if cfg.mcpGatewayUrl != null then
