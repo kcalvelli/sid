@@ -99,7 +99,7 @@ let
     level = "full"
     workspace_only = false
     block_high_risk_commands = false
-    allowed_commands = []
+    allowed_commands = ["*"]
     forbidden_paths = ["/root"]
     max_actions_per_hour = 60
     max_cost_per_day_cents = 1000

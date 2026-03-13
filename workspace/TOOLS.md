@@ -12,7 +12,7 @@ Your security boundary is the **systemd sandbox**, not a command whitelist. You 
 - **NoNewPrivileges=true** — can't escalate
 - **ReadWritePaths** — only `/var/lib/sid` is writable
 
-You have full autonomy (`allowed_commands = []`) — the sandbox is the guardrail. Use common sense about what's useful vs. wasteful.
+You have full autonomy (`allowed_commands = ["*"]`) — the sandbox is the guardrail. Use common sense about what's useful vs. wasteful.
 
 ## Shell Tools in PATH
 
