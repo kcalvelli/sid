@@ -235,8 +235,8 @@ in
 
         # Workspace: clone from GitHub on first deploy, never touch again
         # Sid owns these files — all workspace content lives in his repo
-        # Allow root to run git in sid-owned repo during activation
-        ${pkgs.git}/bin/git config --global --add safe.directory ${zeroclawDir}/workspace 2>/dev/null || true
+        # Helper: run git with safe.directory override (activation runs as root, repo owned by sid)
+        sid_git() { ${pkgs.git}/bin/git -c safe.directory=${zeroclawDir}/workspace "$@"; }
 
         if [ ! -d ${zeroclawDir}/workspace/.git ]; then
           # Remove any legacy symlinks/files from previous Nix-managed workspace
@@ -244,7 +244,7 @@ in
 
           if [ -f "${githubPatFile}" ]; then
             GITHUB_TOKEN="$(cat "${githubPatFile}")"
-            ${pkgs.git}/bin/git clone \
+            sid_git clone \
               https://x-access-token:''${GITHUB_TOKEN}@github.com/kcalvelli/sid-workspace.git \
               ${zeroclawDir}/workspace
             chown -R sid:sid ${zeroclawDir}/workspace
@@ -257,14 +257,14 @@ in
           # Repo exists — update remote URL with current token (supports rotation)
           if [ -f "${githubPatFile}" ]; then
             GITHUB_TOKEN="$(cat "${githubPatFile}")"
-            ${pkgs.git}/bin/git -C ${zeroclawDir}/workspace remote set-url origin \
+            sid_git -C ${zeroclawDir}/workspace remote set-url origin \
               https://x-access-token:''${GITHUB_TOKEN}@github.com/kcalvelli/sid-workspace.git
           fi
         fi
 
         # Git identity for commits
-        ${pkgs.git}/bin/git -C ${zeroclawDir}/workspace config user.name "Sid"
-        ${pkgs.git}/bin/git -C ${zeroclawDir}/workspace config user.email "genxbot@calvelli.us"
+        sid_git -C ${zeroclawDir}/workspace config user.name "Sid"
+        sid_git -C ${zeroclawDir}/workspace config user.email "genxbot@calvelli.us"
 
         # Write config.toml
         cat > ${zeroclawDir}/config.toml << 'CONFIGEOF'
