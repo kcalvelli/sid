@@ -259,6 +259,10 @@ in
           fi
         fi
 
+        # Git identity for commits
+        ${pkgs.git}/bin/git -C ${zeroclawDir}/workspace config user.name "Sid"
+        ${pkgs.git}/bin/git -C ${zeroclawDir}/workspace config user.email "genxbot@calvelli.us"
+
         # Write config.toml
         cat > ${zeroclawDir}/config.toml << 'CONFIGEOF'
         ${configToml}
