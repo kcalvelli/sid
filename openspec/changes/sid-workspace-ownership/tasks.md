@@ -27,10 +27,10 @@
 
 ## 4. Testing and Migration
 
-- [ ] 4.1 Run `nix flake lock --update-input sid` in nixos_config
-- [ ] 4.2 Run `nixos-rebuild switch` on mini
-- [ ] 4.3 Verify workspace files are real files (not symlinks) owned by `sid:sid`
-- [ ] 4.4 Verify Sid can read and write workspace files
-- [ ] 4.5 Verify Sid can run `git add`, `git commit`, `git push` from workspace
-- [ ] 4.6 Verify `.gitignore` excludes runtime artifacts
-- [ ] 4.7 Verify config.toml, secrets, and service plumbing are unaffected
+- [x] 4.1 Run `nix flake lock --update-input sid` in nixos_config
+- [x] 4.2 Run `nixos-rebuild switch` on mini
+- [x] 4.3 Verify workspace files are real files (not symlinks) owned by `sid:sid`
+- [x] 4.4 Verify Sid can read and write workspace files
+- [x] 4.5 Verify Sid can run `git add`, `git commit`, `git push` from workspace
+- [x] 4.6 Verify `.gitignore` excludes runtime artifacts
+- [x] 4.7 Verify config.toml, secrets, and service plumbing are unaffected
