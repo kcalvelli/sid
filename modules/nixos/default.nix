@@ -235,6 +235,9 @@ in
 
         # Workspace: clone from GitHub on first deploy, never touch again
         # Sid owns these files — all workspace content lives in his repo
+        # Allow root to run git in sid-owned repo during activation
+        ${pkgs.git}/bin/git config --global --add safe.directory ${zeroclawDir}/workspace 2>/dev/null || true
+
         if [ ! -d ${zeroclawDir}/workspace/.git ]; then
           # Remove any legacy symlinks/files from previous Nix-managed workspace
           rm -rf ${zeroclawDir}/workspace
