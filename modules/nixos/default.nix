@@ -7,13 +7,8 @@ let
   # Path to secrets (relative to this module)
   secretsPath = ../../secrets;
 
-  # Workspace and skills source files
-  workspaceSrc = ../../workspace;
-  skillsSrc = ../../skills;
-
   # State directory for sid
   stateDir = "/var/lib/sid";
-  workspaceDir = "${stateDir}/workspace";
   zeroclawDir = "${stateDir}/.zeroclaw";
 
   # Secret paths (agenix)
@@ -22,16 +17,7 @@ let
   xmppPasswordFile = "/run/agenix/sid-xmpp-password";
   oauthTokenFile = "/run/agenix/sid-anthropic-oauth-token";
   gatewayTokenFile = "/run/agenix/openclaw-gateway-token";
-
-  # Workspace document files to symlink (read-only, Nix store)
-  workspaceFiles = [
-    "AGENTS.md"
-    "HEARTBEAT.md"
-    "IDENTITY.md"
-    "SOUL.md"
-    "TOOLS.md"
-    "USER.md"
-  ];
+  githubPatFile = "/run/agenix/sid-github-pat";
 
   # Build telegram config section dynamically
   # ZeroClaw: presence of [channels_config.telegram] = enabled; absence = disabled
@@ -238,43 +224,40 @@ in
 
       users.groups.sid = {};
 
-      # ── Activation: directories, workspace, skills, config ──────────
+      # ── Activation: directories, workspace (git), config ────────────
       system.activationScripts.sid-workspace = lib.stringAfter [ "users" ] ''
         # Create directories
-        mkdir -p ${workspaceDir}
-        mkdir -p ${zeroclawDir}/workspace
-        mkdir -p ${stateDir}/skills
+        mkdir -p ${zeroclawDir}
         mkdir -p ${stateDir}/.local/share/sid
         chown -R sid:sid ${stateDir}
         chmod 750 ${stateDir}
-        chmod 750 ${workspaceDir}
         chmod 700 ${zeroclawDir}
 
-        # Symlink persona files from Nix store (read-only, immutable)
-        # Into both the legacy workspace dir and ZeroClaw's workspace dir
-        ${lib.concatMapStringsSep "\n" (file: ''
-          ln -sf ${workspaceSrc}/${file} ${workspaceDir}/${file}
-          ln -sf ${workspaceSrc}/${file} ${zeroclawDir}/workspace/${file}
-        '') workspaceFiles}
+        # Workspace: clone from GitHub on first deploy, never touch again
+        # Sid owns these files — all workspace content lives in his repo
+        if [ ! -d ${zeroclawDir}/workspace/.git ]; then
+          # Remove any legacy symlinks/files from previous Nix-managed workspace
+          rm -rf ${zeroclawDir}/workspace
 
-        # NOTE: MEMORY.md is NOT managed by Nix — it's writable by the agent.
-        # Create in zeroclaw workspace if it doesn't exist (Sid owns this file).
-        if [ ! -f ${zeroclawDir}/workspace/MEMORY.md ]; then
-          touch ${zeroclawDir}/workspace/MEMORY.md
-          chown sid:sid ${zeroclawDir}/workspace/MEMORY.md
+          if [ -f "${githubPatFile}" ]; then
+            GITHUB_TOKEN="$(cat "${githubPatFile}")"
+            ${pkgs.git}/bin/git clone \
+              https://x-access-token:''${GITHUB_TOKEN}@github.com/kcalvelli/sid-workspace.git \
+              ${zeroclawDir}/workspace
+            chown -R sid:sid ${zeroclawDir}/workspace
+          else
+            echo "WARNING: GitHub PAT not available, cannot clone workspace repo"
+            mkdir -p ${zeroclawDir}/workspace
+            chown -R sid:sid ${zeroclawDir}/workspace
+          fi
+        else
+          # Repo exists — update remote URL with current token (supports rotation)
+          if [ -f "${githubPatFile}" ]; then
+            GITHUB_TOKEN="$(cat "${githubPatFile}")"
+            ${pkgs.git}/bin/git -C ${zeroclawDir}/workspace remote set-url origin \
+              https://x-access-token:''${GITHUB_TOKEN}@github.com/kcalvelli/sid-workspace.git
+          fi
         fi
-
-        # Symlink skills from Nix store (read-only)
-        # Into both legacy dir and ZeroClaw's workspace/skills dir
-        mkdir -p ${zeroclawDir}/workspace/skills
-        ln -sfn ${skillsSrc}/cynic ${stateDir}/skills/cynic
-        ln -sfn ${skillsSrc}/watchdog ${stateDir}/skills/watchdog
-        ln -sfn ${skillsSrc}/email ${stateDir}/skills/email
-        ln -sfn ${skillsSrc}/mcp ${stateDir}/skills/mcp
-        ln -sfn ${skillsSrc}/cynic ${zeroclawDir}/workspace/skills/cynic
-        ln -sfn ${skillsSrc}/watchdog ${zeroclawDir}/workspace/skills/watchdog
-        ln -sfn ${skillsSrc}/email ${zeroclawDir}/workspace/skills/email
-        ln -sfn ${skillsSrc}/mcp ${zeroclawDir}/workspace/skills/mcp
 
         # Write config.toml
         cat > ${zeroclawDir}/config.toml << 'CONFIGEOF'
@@ -323,12 +306,17 @@ in
         chown sid:sid ${zeroclawDir}/config.toml
         chmod 0400 ${zeroclawDir}/config.toml
 
-        # Write environment file with OAuth token for Anthropic subscription auth
-        if [ -f "${oauthTokenFile}" ]; then
-          echo "ANTHROPIC_OAUTH_TOKEN=$(cat ${oauthTokenFile})" > ${zeroclawDir}/env
-          chown sid:sid ${zeroclawDir}/env
-          chmod 0400 ${zeroclawDir}/env
-        fi
+        # Write environment file with OAuth token and GitHub PAT
+        {
+          if [ -f "${oauthTokenFile}" ]; then
+            echo "ANTHROPIC_OAUTH_TOKEN=$(cat ${oauthTokenFile})"
+          fi
+          if [ -f "${githubPatFile}" ]; then
+            echo "SID_GITHUB_TOKEN=$(cat ${githubPatFile})"
+          fi
+        } > ${zeroclawDir}/env
+        chown sid:sid ${zeroclawDir}/env
+        chmod 0400 ${zeroclawDir}/env
       '';
 
       # ── ZeroClaw service ─────────────────────────────────────────────
@@ -516,6 +504,16 @@ in
     (lib.mkIf cfg.enable {
       age.secrets.sid-anthropic-oauth-token = {
         file = secretsPath + /anthropic-oauth-token.age;
+        owner = "sid";
+        group = "sid";
+        mode = "0400";
+      };
+    })
+
+    # ── GitHub PAT for workspace repo ──────────────────────────────────
+    (lib.mkIf cfg.enable {
+      age.secrets.sid-github-pat = {
+        file = secretsPath + /github-pat.age;
         owner = "sid";
         group = "sid";
         mode = "0400";

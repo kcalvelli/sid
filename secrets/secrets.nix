@@ -20,4 +20,7 @@ in
 
   # XMPP password for sid@chat.taile0fb4.ts.net (Prosody)
   "xmpp-password.age".publicKeys = [ edge mini keith ];
+
+  # GitHub PAT for sid-workspace repo (workspace file management)
+  "github-pat.age".publicKeys = [ mini keith ];
 }
