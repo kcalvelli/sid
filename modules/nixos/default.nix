@@ -489,6 +489,34 @@ in
           Unit = "sid-log-export.service";
         };
       };
+
+      # ── Workspace git push (hourly sync to GitHub) ──────────────────
+      systemd.services.sid-workspace-push = {
+        description = "Push Sid workspace changes to GitHub";
+        serviceConfig = {
+          Type = "oneshot";
+          User = "sid";
+          Group = "sid";
+          ExecStart = pkgs.writeShellScript "sid-workspace-push" ''
+            cd ${zeroclawDir}/workspace
+            if [ -n "$(${pkgs.git}/bin/git status --porcelain)" ]; then
+              ${pkgs.git}/bin/git add -A
+              ${pkgs.git}/bin/git commit -m "auto: sync uncommitted workspace changes"
+            fi
+            ${pkgs.git}/bin/git push --quiet 2>/dev/null || true
+          '';
+        };
+      };
+
+      systemd.timers.sid-workspace-push = {
+        description = "Push Sid workspace to GitHub hourly";
+        wantedBy = [ "timers.target" ];
+        timerConfig = {
+          OnBootSec = "10min";
+          OnUnitActiveSec = "1h";
+          Unit = "sid-workspace-push.service";
+        };
+      };
     })
 
     # ── PostgreSQL database (optional — only if postgres memory backend is used) ──
