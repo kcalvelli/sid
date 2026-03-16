@@ -255,7 +255,9 @@ impl XmppChannel {
         for room in &self.muc_rooms {
             let muc_presence = format!(
                 "<presence to='{}/{}'>\
-                 <x xmlns='http://jabber.org/protocol/muc'/></presence>",
+                 <x xmlns='http://jabber.org/protocol/muc'>\
+                 <history maxstanzas='0'/>\
+                 </x></presence>",
                 room,
                 xml_escape(&self.muc_nick)
             );
@@ -288,6 +290,12 @@ impl XmppChannel {
             Some(f) => f,
             None => return Ok(()),
         };
+
+        // Skip MUC history replay (delayed messages from before we joined)
+        if stanza.contains("urn:xmpp:delay") || stanza.contains("jabber:x:delay") {
+            tracing::debug!("XMPP skipping delayed/history message");
+            return Ok(());
+        }
 
         let body = match extract_element_content(stanza, "body") {
             Some(b) => xml_unescape(&b),
@@ -1000,7 +1008,9 @@ impl Tool for XmppJoinRoomTool {
             Some(writer) => {
                 let stanza = format!(
                     "<presence to='{}/{}'>\
-                     <x xmlns='http://jabber.org/protocol/muc'/></presence>",
+                     <x xmlns='http://jabber.org/protocol/muc'>\
+                     <history maxstanzas='0'/>\
+                     </x></presence>",
                     xml_escape(room),
                     xml_escape(nick)
                 );

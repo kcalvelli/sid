@@ -1,0 +1,37 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Keith Calvelli <keith@calvelli.dev>
+Date: Sat, 15 Mar 2026 00:00:00 -0400
+Subject: [PATCH 11/11] feat: add channel context prefix to Telegram messages
+
+Prepend a brief context line to all incoming Telegram messages so the
+LLM knows which channel it is responding on. Without this, the agent
+has no way to distinguish Telegram from other channels and cannot
+adapt its response style accordingly.
+---
+ src/channels/telegram.rs | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/src/channels/telegram.rs b/src/channels/telegram.rs
+--- a/src/channels/telegram.rs
++++ b/src/channels/telegram.rs
+@@ -1,4 +1,10 @@
+ use super::traits::{Channel, ChannelMessage, SendMessage};
++
++/// Context prefix prepended to every Telegram message before it reaches the LLM.
++const TELEGRAM_STYLE_PREFIX: &str = "\
++[context: you are responding via Telegram. \
++Keep responses concise. Telegram supports markdown formatting.]\n";
++
+ use crate::config::{Config, StreamMode};
+ use crate::security::pairing::PairingGuard;
+ use anyhow::Context;
+@@ -2633,6 +2639,9 @@
+                         .send()
+                         .await; // Ignore errors for typing indicator
+
++                    // Inject channel context so the LLM knows the source
++                    let mut msg = msg;
++                    msg.content = format!("{TELEGRAM_STYLE_PREFIX}{}", msg.content);
+                     if tx.send(msg).await.is_err() {
+                         return Ok(());
+                     }

@@ -44,6 +44,7 @@
               ./patches/0008-feat-preserve-email-subject-in-reply-threading.patch
               ./patches/0009-feat-save-sent-emails-to-IMAP-Sent-folder.patch
               ./patches/0010-fix-prevent-empty-text-content-blocks-in-API-request.patch
+              ./patches/0011-feat-add-channel-context-prefix-to-Telegram-messages.patch
             ];
 
             postPatch = ''

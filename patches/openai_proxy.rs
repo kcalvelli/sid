@@ -18,6 +18,13 @@ use futures::stream::Stream;
 use serde::Deserialize;
 use std::sync::OnceLock;
 
+/// Context prefix for messages arriving via the OpenAI-compatible API.
+/// Tells the LLM which channel it's responding on so it can adapt tone/length.
+const OPENAI_PROXY_STYLE_PREFIX: &str = "\
+[context: you are responding via the OpenAI-compatible API used by Home Assistant voice. \
+Keep responses short and conversational — this is a voice assistant chain. \
+Do NOT use markdown formatting.]\n";
+
 // ── Identity cache ──
 
 static IDENTITY_CACHE: OnceLock<Option<String>> = OnceLock::new();
@@ -150,9 +157,10 @@ pub async fn handle_chat_completions(
 
     let is_stream = req.stream.unwrap_or(false);
 
-    // Run the full agent loop
+    // Run the full agent loop with channel context
     let config = state.config.lock().clone();
-    let response = match crate::agent::process_message(config, &message).await {
+    let contextualized = format!("{OPENAI_PROXY_STYLE_PREFIX}{message}");
+    let response = match crate::agent::process_message(config, &contextualized).await {
         Ok(r) => r,
         Err(e) => {
             tracing::error!("Agent loop error: {e}");
