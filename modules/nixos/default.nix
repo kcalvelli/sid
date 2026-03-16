@@ -61,7 +61,7 @@ let
     default_temperature = 0.7
 
     [agent]
-    max_tool_iterations = 30
+    max_tool_iterations = 60
 
     [memory]
     backend = "sqlite"
@@ -92,6 +92,7 @@ let
 
     [channels_config]
     cli = true
+    show_tool_calls = false
 
     ${telegramConfig}
 
