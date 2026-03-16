@@ -66,6 +66,8 @@ let
     [memory]
     backend = "sqlite"
     auto_save = true
+    response_cache_enabled = true
+    response_cache_ttl_minutes = 60
 
     [heartbeat]
     enabled = true
@@ -93,6 +95,7 @@ let
     [channels_config]
     cli = true
     show_tool_calls = false
+    session_ttl_hours = 720
 
     ${telegramConfig}
 
