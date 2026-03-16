@@ -217,6 +217,7 @@ in
       users.users.sid = {
         isSystemUser = true;
         group = "sid";
+        extraGroups = [ "systemd-journal" ];
         home = stateDir;
         createHome = true;
         shell = "/sbin/nologin";
@@ -431,65 +432,7 @@ in
         };
       };
 
-      # ── Log export service (runs as root for journalctl access) ─────
-      systemd.services.sid-log-export = {
-        description = "Collect system logs for Sid watchdog";
-        after = [ "systemd-journald.service" ];
 
-        serviceConfig = {
-          Type = "oneshot";
-          ExecStart = pkgs.writeShellScript "sid-log-export" ''
-            set -euo pipefail
-            LOGFILE="${stateDir}/.local/share/sid/watchdog.log"
-
-            # Collect last 24 hours of relevant logs
-            # Priority 0-4: emergency, alert, critical, error, warning
-            {
-              # Kernel messages (hardware errors, thermal, etc.)
-              ${pkgs.systemd}/bin/journalctl \
-                --since "24 hours ago" \
-                --no-pager \
-                --output=short-iso \
-                -p 0..4 \
-                -k 2>/dev/null || true
-
-              # Thermal daemon
-              ${pkgs.systemd}/bin/journalctl \
-                --since "24 hours ago" \
-                --no-pager \
-                --output=short-iso \
-                -u thermald.service 2>/dev/null || true
-
-              # SMART disk monitoring
-              ${pkgs.systemd}/bin/journalctl \
-                --since "24 hours ago" \
-                --no-pager \
-                --output=short-iso \
-                -u smartd.service 2>/dev/null || true
-            } | sort -u > "$LOGFILE.tmp"
-
-            # Also capture failed units
-            ${pkgs.systemd}/bin/systemctl list-units --failed --no-legend --no-pager \
-              >> "$LOGFILE.tmp" 2>/dev/null || true
-
-            # Atomically replace the log file
-            mv "$LOGFILE.tmp" "$LOGFILE"
-            chown sid:sid "$LOGFILE"
-            chmod 640 "$LOGFILE"
-          '';
-        };
-      };
-
-      # ── Log export timer ────────────────────────────────────────────
-      systemd.timers.sid-log-export = {
-        description = "Update Sid watchdog log periodically";
-        wantedBy = [ "timers.target" ];
-        timerConfig = {
-          OnBootSec = "5min";
-          OnUnitActiveSec = "15min";
-          Unit = "sid-log-export.service";
-        };
-      };
 
       # ── Workspace git push (hourly sync to GitHub) ──────────────────
       systemd.services.sid-workspace-push = {
