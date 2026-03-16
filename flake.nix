@@ -26,7 +26,7 @@
         {
           zeroclaw = pkgs.rustPlatform.buildRustPackage {
             pname = "zeroclaw";
-            version = "0.1.9";
+            version = "0.4.0";
             src = zeroclaw;
 
             cargoLock.lockFile = zeroclaw + "/Cargo.lock";
@@ -38,13 +38,12 @@
               ./patches/0002-feat-prepend-ISO-8601-timestamps-to-all-incoming-mes.patch
               ./patches/0003-feat-wire-XMPP-channel-into-channel-registry-and-con.patch
               ./patches/0004-feat-use-full-agent-loop-for-webhook-requests.patch
-              ./patches/0005-feat-add-v1-models-endpoint-for-OpenAI-compatible-mo.patch
-              ./patches/0006-feat-wire-OpenAI-compatible-v1-chat-completions-endp.patch
-              ./patches/0007-fix-skip-emails-from-own-address-to-prevent-reply-lo.patch
+              ./patches/0005-feat-add-v1-models-endpoint-for-OpenAI-compatible.patch
+              ./patches/0006-feat-wire-OpenAI-compatible-v1-chat-completions.patch
+              ./patches/0007-fix-skip-emails-from-own-address-to-prevent-reply.patch
               ./patches/0008-feat-preserve-email-subject-in-reply-threading.patch
               ./patches/0009-feat-save-sent-emails-to-IMAP-Sent-folder.patch
-              ./patches/0010-fix-prevent-empty-text-content-blocks-in-API-request.patch
-              ./patches/0011-feat-add-channel-context-prefix-to-Telegram-messages.patch
+              ./patches/0010-feat-add-channel-context-prefix-to-Telegram-messages.patch
             ];
 
             postPatch = ''

@@ -1,20 +1,18 @@
-From 243dc963221e45d02e25dfee60d639e5369c630d Mon Sep 17 00:00:00 2001
+From b3f81ecb9ad236c8e3dd70800e0d3d4780719681 Mon Sep 17 00:00:00 2001
 From: Keith Calvelli <keith@calvelli.dev>
-Date: Fri, 13 Mar 2026 09:34:24 -0400
+Date: Mon, 16 Mar 2026 15:17:37 -0400
 Subject: [PATCH 01/10] fix: add missing futures and async-stream crate
  dependencies
 
-The futures and async-stream crates are used by channel implementations
-but not declared in Cargo.toml, causing build failures.
 ---
  Cargo.toml | 2 ++
  1 file changed, 2 insertions(+)
 
 diff --git a/Cargo.toml b/Cargo.toml
-index 137937b..774556b 100644
+index 8bf9e26d..0ca1da11 100644
 --- a/Cargo.toml
 +++ b/Cargo.toml
-@@ -120,6 +120,8 @@ which = "8.0"
+@@ -138,6 +138,8 @@ which = "8.0"
  # WebSocket client channels (Discord/Lark/DingTalk/Nostr)
  tokio-tungstenite = { version = "0.28", features = ["rustls-tls-webpki-roots"] }
  futures-util = { version = "0.3", default-features = false, features = ["sink"] }

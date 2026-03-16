@@ -1,17 +1,14 @@
-From ab4fc21d328e810e6e7f0b1d8194ec2b694a0014 Mon Sep 17 00:00:00 2001
+From 062a7529ab4ab6d747dfe69c7d0ac305e74582d3 Mon Sep 17 00:00:00 2001
 From: Keith Calvelli <keith@calvelli.dev>
-Date: Fri, 13 Mar 2026 09:57:42 -0400
+Date: Mon, 16 Mar 2026 15:18:38 -0400
 Subject: [PATCH 07/10] fix: skip emails from own address to prevent reply
- loops
 
-Filter out messages sent from the bot's own email address in
-process_unseen to avoid processing self-replies.
 ---
  src/channels/email_channel.rs | 6 ++++++
  1 file changed, 6 insertions(+)
 
 diff --git a/src/channels/email_channel.rs b/src/channels/email_channel.rs
-index 4e6f7c2..bac22b4 100644
+index 4e6f7c22..bac22b46 100644
 --- a/src/channels/email_channel.rs
 +++ b/src/channels/email_channel.rs
 @@ -451,6 +451,12 @@ impl EmailChannel {

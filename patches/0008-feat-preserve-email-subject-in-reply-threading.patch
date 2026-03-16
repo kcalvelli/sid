@@ -1,17 +1,14 @@
-From 50218f0209acfebc0113a68def8cd8855ce0e28e Mon Sep 17 00:00:00 2001
+From dd478acf8ddb1c07967e99115cc2e69492531379 Mon Sep 17 00:00:00 2001
 From: Keith Calvelli <keith@calvelli.dev>
-Date: Fri, 13 Mar 2026 09:59:21 -0400
+Date: Mon, 16 Mar 2026 15:18:38 -0400
 Subject: [PATCH 08/10] feat: preserve email subject in reply threading
 
-Extract subject from incoming emails into thread_ts field on
-ChannelMessage. When sending replies, use thread_ts as the subject
-with 'Re: ' prefix if no explicit subject is provided.
 ---
  src/channels/email_channel.rs | 20 ++++++++++++++++++--
  1 file changed, 18 insertions(+), 2 deletions(-)
 
 diff --git a/src/channels/email_channel.rs b/src/channels/email_channel.rs
-index bac22b4..8cd0c36 100644
+index bac22b46..8cd0c36a 100644
 --- a/src/channels/email_channel.rs
 +++ b/src/channels/email_channel.rs
 @@ -465,6 +465,13 @@ impl EmailChannel {

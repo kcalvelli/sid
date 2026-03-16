@@ -1,17 +1,14 @@
-From e1848f6212cc0d4f3998a72cd6b6bdf17f86f805 Mon Sep 17 00:00:00 2001
+From 066b307da08056bf5a1539413ee85176a67fae0c Mon Sep 17 00:00:00 2001
 From: Keith Calvelli <keith@calvelli.dev>
-Date: Fri, 13 Mar 2026 10:02:51 -0400
+Date: Mon, 16 Mar 2026 15:18:38 -0400
 Subject: [PATCH 09/10] feat: save sent emails to IMAP Sent folder
 
-Add sent_folder config field (default: "Sent") to EmailConfig.
-After successful SMTP send, append the raw email to the configured
-IMAP folder with \Seen flag. Failures are logged but non-fatal.
 ---
  src/channels/email_channel.rs | 26 ++++++++++++++++++++++++++
  1 file changed, 26 insertions(+)
 
 diff --git a/src/channels/email_channel.rs b/src/channels/email_channel.rs
-index 8cd0c36..5b568e6 100644
+index 8cd0c36a..5b568e61 100644
 --- a/src/channels/email_channel.rs
 +++ b/src/channels/email_channel.rs
 @@ -70,6 +70,9 @@ pub struct EmailConfig {

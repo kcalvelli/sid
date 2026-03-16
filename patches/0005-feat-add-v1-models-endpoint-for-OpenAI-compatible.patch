@@ -1,20 +1,17 @@
-From 7b069df4a63cd58253efc1cf6c452937b6d4e210 Mon Sep 17 00:00:00 2001
+From 46485134b14b436de98497db5f0b1c61c189e051 Mon Sep 17 00:00:00 2001
 From: Keith Calvelli <keith@calvelli.dev>
-Date: Fri, 13 Mar 2026 09:52:33 -0400
+Date: Mon, 16 Mar 2026 15:18:38 -0400
 Subject: [PATCH 05/10] feat: add /v1/models endpoint for OpenAI-compatible
- model discovery
 
-Static endpoint returning a single model entry for HA and client
-discovery. No authentication required.
 ---
  src/gateway/mod.rs | 6 ++++++
  1 file changed, 6 insertions(+)
 
 diff --git a/src/gateway/mod.rs b/src/gateway/mod.rs
-index 5011a1b..5fec65d 100644
+index 53c4c537..73b09cd2 100644
 --- a/src/gateway/mod.rs
 +++ b/src/gateway/mod.rs
-@@ -667,6 +667,7 @@ pub async fn run_gateway(host: &str, port: u16, config: Config) -> Result<()> {
+@@ -680,6 +680,7 @@ pub async fn run_gateway(host: &str, port: u16, config: Config) -> Result<()> {
          .route("/admin/paircode/new", post(handle_admin_paircode_new))
          // ── Existing routes ──
          .route("/health", get(handle_health))
@@ -22,7 +19,7 @@ index 5011a1b..5fec65d 100644
          .route("/metrics", get(handle_metrics))
          .route("/pair", post(handle_pair))
          .route("/webhook", post(handle_webhook))
-@@ -891,6 +892,11 @@ pub struct WebhookBody {
+@@ -921,6 +922,11 @@ pub struct WebhookBody {
      pub message: String,
  }
  

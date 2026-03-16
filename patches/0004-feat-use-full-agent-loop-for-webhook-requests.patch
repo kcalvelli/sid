@@ -1,20 +1,17 @@
-From 36180fc6eed1f43ad4794d65b9d208d5d0a4690e Mon Sep 17 00:00:00 2001
+From 311629f17384678c77ea5c674ad72d005e960c75 Mon Sep 17 00:00:00 2001
 From: Keith Calvelli <keith@calvelli.dev>
-Date: Fri, 13 Mar 2026 09:50:59 -0400
+Date: Mon, 16 Mar 2026 15:18:38 -0400
 Subject: [PATCH 04/10] feat: use full agent loop for webhook requests
 
-Switch webhook handler from run_gateway_chat_simple to
-run_gateway_chat_with_tools so that incoming webhook messages
-can trigger the complete tool-calling agent loop.
 ---
  src/gateway/mod.rs | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/src/gateway/mod.rs b/src/gateway/mod.rs
-index 47785b3..5011a1b 100644
+index 3f900e3b..53c4c537 100644
 --- a/src/gateway/mod.rs
 +++ b/src/gateway/mod.rs
-@@ -1006,7 +1006,7 @@ async fn handle_webhook(
+@@ -1036,7 +1036,7 @@ async fn handle_webhook(
              messages_count: 1,
          });
  

@@ -1,17 +1,14 @@
-From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From 17aa401b9febcdfbbf8e207df7d89081078f95ed Mon Sep 17 00:00:00 2001
 From: Keith Calvelli <keith@calvelli.dev>
-Date: Sat, 15 Mar 2026 00:00:00 -0400
-Subject: [PATCH 11/11] feat: add channel context prefix to Telegram messages
+Date: Mon, 16 Mar 2026 15:18:38 -0400
+Subject: [PATCH 10/10] feat: add channel context prefix to Telegram messages
 
-Prepend a brief context line to all incoming Telegram messages so the
-LLM knows which channel it is responding on. Without this, the agent
-has no way to distinguish Telegram from other channels and cannot
-adapt its response style accordingly.
 ---
  src/channels/telegram.rs | 9 +++++++++
  1 file changed, 9 insertions(+)
 
 diff --git a/src/channels/telegram.rs b/src/channels/telegram.rs
+index fb9e01f7..bd75ca62 100644
 --- a/src/channels/telegram.rs
 +++ b/src/channels/telegram.rs
 @@ -1,4 +1,10 @@
@@ -25,13 +22,16 @@ diff --git a/src/channels/telegram.rs b/src/channels/telegram.rs
  use crate::config::{Config, StreamMode};
  use crate::security::pairing::PairingGuard;
  use anyhow::Context;
-@@ -2633,6 +2639,9 @@
+@@ -2652,6 +2658,9 @@ Ensure only one `zeroclaw` process is using this bot token."
                          .send()
                          .await; // Ignore errors for typing indicator
-
+ 
 +                    // Inject channel context so the LLM knows the source
 +                    let mut msg = msg;
 +                    msg.content = format!("{TELEGRAM_STYLE_PREFIX}{}", msg.content);
                      if tx.send(msg).await.is_err() {
                          return Ok(());
                      }
+-- 
+2.53.0
+
