@@ -10,17 +10,41 @@ let
 in
 {
   # Telegram bot token for messaging channel
-  "telegram-bot-token.age".publicKeys = [ edge mini ];
+  "telegram-bot-token.age".publicKeys = [
+    edge
+    mini
+  ];
 
   # Email password for genxbot@calvelli.us
-  "genxbot-email-password.age".publicKeys = [ edge mini ];
+  "genxbot-email-password.age".publicKeys = [
+    edge
+    mini
+  ];
 
   # Anthropic OAuth setup token (Claude subscription auth)
-  "anthropic-oauth-token.age".publicKeys = [ edge mini keith ];
+  "anthropic-oauth-token.age".publicKeys = [
+    edge
+    mini
+    keith
+  ];
 
   # XMPP password for sid@chat.taile0fb4.ts.net (Prosody)
-  "xmpp-password.age".publicKeys = [ edge mini keith ];
+  "xmpp-password.age".publicKeys = [
+    edge
+    mini
+    keith
+  ];
 
   # GitHub PAT for sid-workspace repo (workspace file management)
-  "github-pat.age".publicKeys = [ mini keith ];
+  "github-pat.age".publicKeys = [
+    mini
+    keith
+  ];
+
+  # Grok API key
+  "xai-api-key.age".publicKeys = [
+    edge
+    mini
+    keith
+  ];
 }
