@@ -61,7 +61,7 @@ let
     default_temperature = 0.7
 
     [agent]
-    max_tool_iterations = 60
+    max_tool_iterations = 25
 
     [memory]
     backend = "sqlite"
@@ -70,8 +70,8 @@ let
     response_cache_ttl_minutes = 60
 
     [heartbeat]
-    enabled = true
-    interval_minutes = 30
+    enabled = false
+    interval_minutes = 120
 
     [gateway]
     host = "127.0.0.1"
@@ -90,7 +90,7 @@ let
     allowed_commands = ["*"]
     forbidden_paths = ["/root"]
     max_actions_per_hour = 100
-    max_cost_per_day_cents = 1000
+    max_cost_per_day_cents = 500
 
     [channels_config]
     cli = true
