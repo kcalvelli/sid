@@ -16,6 +16,7 @@ let
   emailPasswordFile = "/run/agenix/sid-email-password";
   xmppPasswordFile = "/run/agenix/sid-xmpp-password";
   oauthTokenFile = "/run/agenix/sid-anthropic-oauth-token";
+  xaiApiKeyFile = "/run/agenix/sid-xai-api-key";
   gatewayTokenFile = "/run/agenix/openclaw-gateway-token";
   githubPatFile = "/run/agenix/sid-github-pat";
 
@@ -53,11 +54,9 @@ let
   '';
 
   # ZeroClaw config.toml content
-  # api_key is NOT included — subscription auth is used instead
-  # (zeroclaw auth paste-token --provider anthropic --profile default --auth-kind authorization)
   configToml = ''
-    default_provider = "anthropic"
-    default_model = "claude-opus-4-6"
+    default_provider = "xai"
+    default_model = "grok-4-1-fast-reasoning"
     default_temperature = 0.7
 
     [agent]
@@ -89,17 +88,9 @@ let
     monthly_limit_usd = 100.0
     warn_at_percent = 80
 
-    [cost.prices."anthropic/claude-opus-4-6"]
-    input = 15.0
-    output = 75.0
-
-    [cost.prices."anthropic/claude-opus-4-6-20250514"]
-    input = 15.0
-    output = 75.0
-
-    [cost.prices."anthropic/claude-sonnet-4-6"]
+    [cost.prices."xai/grok-4-1-fast-reasoning"]
     input = 3.0
-    output = 15.0
+    output = 12.0
 
     [autonomy]
     level = "full"
@@ -336,8 +327,11 @@ in
         chown sid:sid ${zeroclawDir}/config.toml
         chmod 0400 ${zeroclawDir}/config.toml
 
-        # Write environment file with OAuth token and GitHub PAT
+        # Write environment file with API keys
         {
+          if [ -f "${xaiApiKeyFile}" ]; then
+            echo "XAI_API_KEY=$(cat ${xaiApiKeyFile})"
+          fi
           if [ -f "${oauthTokenFile}" ]; then
             echo "ANTHROPIC_OAUTH_TOKEN=$(cat ${oauthTokenFile})"
           fi
@@ -422,7 +416,7 @@ in
           ProtectKernelModules = true;
           ProtectKernelLogs = true;
           ProtectControlGroups = true;
-          # Note: ProtectProc/ProcSubset would break cynic skill's /proc reads
+          # Note: ProtectProc/ProcSubset would break /proc reads
           ProtectHostname = true;
           ProtectClock = true;
           RestrictRealtime = true;
@@ -500,7 +494,17 @@ in
       networking.firewall.allowedTCPPorts = [ cfg.port ];
     })
 
-    # ── Anthropic OAuth token (subscription auth) ────────────────────────
+    # ── xAI API key ────────────────────────────────────────────────────
+    (lib.mkIf cfg.enable {
+      age.secrets.sid-xai-api-key = {
+        file = secretsPath + /xai-api-key.age;
+        owner = "sid";
+        group = "sid";
+        mode = "0400";
+      };
+    })
+
+    # ── Anthropic OAuth token (kept for fallback) ──────────────────────
     (lib.mkIf cfg.enable {
       age.secrets.sid-anthropic-oauth-token = {
         file = secretsPath + /anthropic-oauth-token.age;
