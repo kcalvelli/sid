@@ -83,6 +83,24 @@ let
     [gateway.http.endpoints.chatCompletions]
     enabled = true
 
+    [cost]
+    enabled = true
+    daily_limit_usd = 5.0
+    monthly_limit_usd = 100.0
+    warn_at_percent = 80
+
+    [cost.prices."anthropic/claude-opus-4-6"]
+    input = 15.0
+    output = 75.0
+
+    [cost.prices."anthropic/claude-opus-4-6-20250514"]
+    input = 15.0
+    output = 75.0
+
+    [cost.prices."anthropic/claude-sonnet-4-6"]
+    input = 3.0
+    output = 15.0
+
     [autonomy]
     level = "full"
     workspace_only = false
