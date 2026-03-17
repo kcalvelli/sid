@@ -16,7 +16,7 @@ in
   "genxbot-email-password.age".publicKeys = [ edge mini ];
 
   # Anthropic OAuth setup token (Claude subscription auth)
-  "anthropic-oauth-token.age".publicKeys = [ edge mini ];
+  "anthropic-oauth-token.age".publicKeys = [ edge mini keith ];
 
   # XMPP password for sid@chat.taile0fb4.ts.net (Prosody)
   "xmpp-password.age".publicKeys = [ edge mini keith ];
