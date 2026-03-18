@@ -56,7 +56,7 @@ let
   # ZeroClaw config.toml content
   configToml = ''
     default_provider = "anthropic"
-    default_model = "claude-sonnet-4-6"
+    default_model = "claude-opus-4-6"
     default_temperature = 0.7
 
     [agent]
@@ -88,9 +88,9 @@ let
     monthly_limit_usd = 100.0
     warn_at_percent = 80
 
-    [cost.prices."anthropic/claude-sonnet-4-6"]
-    input = 3.0
-    output = 15.0
+    [cost.prices."anthropic/claude-opus-4-6"]
+    input = 15.0
+    output = 75.0
 
     [autonomy]
     level = "full"
