@@ -211,10 +211,9 @@ if XMPP_JID and XMPP_PASSWORD:
                     self.register_plugin("xep_0045")  # MUC
 
             async def on_start(self, _event):
-                self.send_presence()
-                await self.get_roster()
                 try:
                     if is_muc:
+                        self.send_presence()
                         await self.plugin["xep_0045"].join_muc(
                             recipient, self.boundjid.user
                         )
@@ -222,8 +221,8 @@ if XMPP_JID and XMPP_PASSWORD:
                             mto=recipient, mbody=message, mtype="groupchat"
                         )
                     else:
-                        # Wait for presence to be acknowledged before DM
-                        await asyncio.sleep(0.5)
+                        # DMs: skip presence to avoid disrupting ZeroClaw's
+                        # native XMPP session (same JID, different resource)
                         self.send_message(
                             mto=recipient, mbody=message, mtype="chat"
                         )
