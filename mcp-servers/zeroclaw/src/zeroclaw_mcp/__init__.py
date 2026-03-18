@@ -229,7 +229,13 @@ if XMPP_JID and XMPP_PASSWORD:
                     await asyncio.sleep(0.5)
                     self.disconnect()
 
+        import ssl
+
         bot = SendBot()
+        # Disable SSL verification (Prosody uses self-signed certs)
+        bot.ssl_context = ssl.create_default_context()
+        bot.ssl_context.check_hostname = False
+        bot.ssl_context.verify_mode = ssl.CERT_NONE
         if XMPP_HOST:
             bot.connect((XMPP_HOST, XMPP_PORT))
         else:
