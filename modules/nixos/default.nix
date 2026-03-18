@@ -55,8 +55,8 @@ let
 
   # ZeroClaw config.toml content
   configToml = ''
-    default_provider = "xai"
-    default_model = "grok-4.20-beta-latest-non-reasoning"
+    default_provider = "anthropic"
+    default_model = "claude-sonnet-4-6"
     default_temperature = 0.7
 
     [agent]
@@ -88,9 +88,9 @@ let
     monthly_limit_usd = 100.0
     warn_at_percent = 80
 
-    [cost.prices."xai/grok-4.20-beta-latest-non-reasoning"]
+    [cost.prices."anthropic/claude-sonnet-4-6"]
     input = 3.0
-    output = 12.0
+    output = 15.0
 
     [autonomy]
     level = "full"
