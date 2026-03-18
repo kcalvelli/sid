@@ -16,7 +16,7 @@ index 3f900e3b..53c4c537 100644
          });
  
 -    match run_gateway_chat_simple(&state, message).await {
-+    match run_gateway_chat_with_tools(&state, message).await {
++    match run_gateway_chat_with_tools(&state, message, None).await {
          Ok(response) => {
              let duration = started_at.elapsed();
              state

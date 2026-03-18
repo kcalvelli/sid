@@ -1,17 +1,13 @@
-From 9847016d6d0c5bcfec56ad1820b04868e7cb76d6 Mon Sep 17 00:00:00 2001
+From c904e1459cdf6f56fd51382431f645e18ef0b352 Mon Sep 17 00:00:00 2001
 From: Keith Calvelli <keith@calvelli.dev>
 Date: Mon, 16 Mar 2026 15:18:04 -0400
 Subject: [PATCH 02/10] feat: prepend ISO-8601 timestamps to all incoming
  messages
+ messages
 
----
- src/channels/mod.rs | 8 +++++++-
- src/daemon/mod.rs   | 4 ++--
- src/gateway/mod.rs  | 4 +++-
- 3 files changed, 12 insertions(+), 4 deletions(-)
 
 diff --git a/src/channels/mod.rs b/src/channels/mod.rs
-index 5928e699..014881fd 100644
+index 9a707e0..f15a879 100644
 --- a/src/channels/mod.rs
 +++ b/src/channels/mod.rs
 @@ -14,6 +14,8 @@
@@ -20,10 +16,10 @@ index 5928e699..014881fd 100644
  
 +use chrono::TimeZone;
 +
+ pub mod bluesky;
  pub mod clawdtalk;
  pub mod cli;
- pub mod dingtalk;
-@@ -1866,7 +1868,11 @@ async fn process_channel_message(
+@@ -1973,7 +1975,11 @@ async fn process_channel_message(
          .is_some_and(|turns| !turns.is_empty());
  
      // Preserve user turn before the LLM call so interrupted requests keep context.
@@ -37,7 +33,7 @@ index 5928e699..014881fd 100644
      // Build history from per-sender conversation cache.
      let prior_turns_raw = ctx
 diff --git a/src/daemon/mod.rs b/src/daemon/mod.rs
-index eee23122..01f04212 100644
+index 9bd4e34..1b52eeb 100644
 --- a/src/daemon/mod.rs
 +++ b/src/daemon/mod.rs
 @@ -1,6 +1,6 @@
@@ -48,7 +44,7 @@ index eee23122..01f04212 100644
  use std::future::Future;
  use std::path::PathBuf;
  use tokio::task::JoinHandle;
-@@ -350,7 +350,7 @@ async fn run_heartbeat_worker(config: Config) -> Result<()> {
+@@ -362,7 +362,7 @@ async fn run_heartbeat_worker(config: Config) -> Result<()> {
          let mut tick_had_error = false;
          for task in &tasks_to_run {
              let task_start = std::time::Instant::now();
@@ -58,18 +54,19 @@ index eee23122..01f04212 100644
              match Box::pin(crate::agent::run(
                  config.clone(),
 diff --git a/src/gateway/mod.rs b/src/gateway/mod.rs
-index f3470340..3f900e3b 100644
+index 63c3733..755bcd6 100644
 --- a/src/gateway/mod.rs
 +++ b/src/gateway/mod.rs
-@@ -13,6 +13,7 @@ pub mod sse;
+@@ -16,6 +16,8 @@ pub mod sse;
  pub mod static_files;
  pub mod ws;
  
 +use chrono::Local;
++
  use crate::channels::{
-     Channel, LinqChannel, NextcloudTalkChannel, SendMessage, WatiChannel, WhatsAppChannel,
- };
-@@ -877,7 +878,8 @@ async fn persist_pairing_tokens(config: Arc<Mutex<Config>>, pairing: &PairingGua
+     session_backend::SessionBackend, session_sqlite::SqliteSessionBackend, Channel, LinqChannel,
+     NextcloudTalkChannel, SendMessage, WatiChannel, WhatsAppChannel,
+@@ -969,7 +971,8 @@ async fn persist_pairing_tokens(config: Arc<Mutex<Config>>, pairing: &PairingGua
  
  /// Simple chat for webhook endpoint (no tools, for backward compatibility and testing).
  async fn run_gateway_chat_simple(state: &AppState, message: &str) -> anyhow::Result<String> {

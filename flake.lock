@@ -107,15 +107,16 @@
     "zeroclaw": {
       "flake": false,
       "locked": {
-        "lastModified": 1773683262,
-        "narHash": "sha256-RLD4njSYu/rC0DBNh8FoWFRnVqxltwImOfuvXctKnf4=",
+        "lastModified": 1773800210,
+        "narHash": "sha256-RlliRnf9RLIbzWh3WRIvicie8mOPN0uimiiFbFD6+tQ=",
         "owner": "zeroclaw-labs",
         "repo": "zeroclaw",
-        "rev": "566e3cf35bfad72eabc20d297e65b4187b1ccd78",
+        "rev": "3d92b2a6529ccda15691102b31efcdf36c065ce3",
         "type": "github"
       },
       "original": {
         "owner": "zeroclaw-labs",
+        "ref": "v0.5.0",
         "repo": "zeroclaw",
         "type": "github"
       }

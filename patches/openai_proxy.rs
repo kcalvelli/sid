@@ -160,7 +160,7 @@ pub async fn handle_chat_completions(
     // Run the full agent loop with channel context
     let config = state.config.lock().clone();
     let contextualized = format!("{OPENAI_PROXY_STYLE_PREFIX}{message}");
-    let response = match crate::agent::process_message(config, &contextualized).await {
+    let response = match crate::agent::process_message(config, &contextualized, None).await {
         Ok(r) => r,
         Err(e) => {
             tracing::error!("Agent loop error: {e}");

@@ -55,9 +55,10 @@ let
 
   # ZeroClaw config.toml content
   configToml = ''
-    default_provider = "anthropic"
+    default_provider = "claude-code"
     default_model = "claude-opus-4-6"
     default_temperature = 0.7
+    fallback_providers = ["anthropic"]
 
     [agent]
     max_tool_iterations = 25
@@ -374,6 +375,7 @@ in
           dnsutils     # dig, nslookup
           file         # file type detection
           tree         # directory listing
+          claude-code  # Claude Code CLI (claude-code provider)
         ]) ++ cfg.extraPackages
            ++ lib.optional (cfg.mcpGatewayPackage != null) (
              if cfg.mcpGatewayUrl != null then

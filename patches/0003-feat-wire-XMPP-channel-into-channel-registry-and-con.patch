@@ -1,40 +1,36 @@
-From a8b0cb6ffb1f4da64195a0de10de90c4b50feea9 Mon Sep 17 00:00:00 2001
+From 2f50380424006a6e59291807841870dac8216d84 Mon Sep 17 00:00:00 2001
 From: Keith Calvelli <keith@calvelli.dev>
-Date: Mon, 16 Mar 2026 15:18:30 -0400
+Date: Mon, 16 Mar 2026 15:18:04 -0400
 Subject: [PATCH 03/10] feat: wire XMPP channel into channel registry and
  config schema
+ schema
 
----
- .gitignore           | 2 +-
- src/channels/mod.rs  | 9 +++++++++
- src/config/schema.rs | 3 +++
- src/tools/mod.rs     | 5 +++++
- 4 files changed, 18 insertions(+), 1 deletion(-)
 
 diff --git a/.gitignore b/.gitignore
-index 2d8634c1..16969999 100644
+index f20d7e3..af31343 100644
 --- a/.gitignore
 +++ b/.gitignore
-@@ -47,4 +47,4 @@ lcov.info
+@@ -48,4 +48,4 @@ lcov.info
  .idea
  
  # Wrangler cache
 -.wrangler/
 \ No newline at end of file
 +.wrangler/.direnv/
+\ No newline at end of file
 diff --git a/src/channels/mod.rs b/src/channels/mod.rs
-index 014881fd..8ee274be 100644
+index f15a879..8f07a64 100644
 --- a/src/channels/mod.rs
 +++ b/src/channels/mod.rs
-@@ -50,6 +50,7 @@ pub mod whatsapp;
+@@ -55,6 +55,7 @@ pub mod whatsapp;
  pub mod whatsapp_storage;
  #[cfg(feature = "whatsapp-web")]
  pub mod whatsapp_web;
 +pub mod xmpp;
  
+ pub use bluesky::BlueskyChannel;
  pub use clawdtalk::{ClawdTalkChannel, ClawdTalkConfig};
- pub use cli::CliChannel;
-@@ -80,6 +81,7 @@ pub use wecom::WeComChannel;
+@@ -90,6 +91,7 @@ pub use wecom::WeComChannel;
  pub use whatsapp::WhatsAppChannel;
  #[cfg(feature = "whatsapp-web")]
  pub use whatsapp_web::WhatsAppWebChannel;
@@ -42,8 +38,8 @@ index 014881fd..8ee274be 100644
  
  use crate::agent::loop_::{build_tool_instructions, run_tool_call_loop, scrub_credentials};
  use crate::approval::ApprovalManager;
-@@ -3457,6 +3459,13 @@ fn collect_configured_channels(
-         }
+@@ -3670,6 +3672,13 @@ fn collect_configured_channels(
+         });
      }
  
 +    if let Some(ref xmpp_cfg) = config.channels_config.xmpp {
@@ -57,32 +53,32 @@ index 014881fd..8ee274be 100644
  }
  
 diff --git a/src/config/schema.rs b/src/config/schema.rs
-index fec1626d..79ecb11e 100644
+index dc9b2ae..c777abf 100644
 --- a/src/config/schema.rs
 +++ b/src/config/schema.rs
-@@ -3618,6 +3618,8 @@ pub struct ChannelsConfig {
-     pub nostr: Option<NostrConfig>,
-     /// ClawdTalk voice channel configuration.
-     pub clawdtalk: Option<crate::channels::ClawdTalkConfig>,
+@@ -4291,6 +4291,8 @@ pub struct ChannelsConfig {
+     pub reddit: Option<RedditConfig>,
+     /// Bluesky channel configuration (AT Protocol).
+     pub bluesky: Option<BlueskyConfig>,
 +    /// XMPP channel configuration.
 +    pub xmpp: Option<crate::channels::xmpp::XmppConfig>,
      /// Base timeout in seconds for processing a single channel message (LLM + tools).
      /// Runtime uses this as a per-turn budget that scales with tool-loop depth
      /// (up to 4x, capped) so one slow/retried model call does not consume the
-@@ -3780,6 +3782,7 @@ impl Default for ChannelsConfig {
-             #[cfg(feature = "channel-nostr")]
-             nostr: None,
+@@ -4465,6 +4467,7 @@ impl Default for ChannelsConfig {
              clawdtalk: None,
+             reddit: None,
+             bluesky: None,
 +            xmpp: None,
              message_timeout_secs: default_channel_message_timeout_secs(),
              ack_reactions: true,
-             show_tool_calls: true,
+             show_tool_calls: false,
 diff --git a/src/tools/mod.rs b/src/tools/mod.rs
-index 830c0f72..2e3a07bd 100644
+index 7c5ae54..95d9ece 100644
 --- a/src/tools/mod.rs
 +++ b/src/tools/mod.rs
-@@ -558,6 +558,11 @@ pub fn all_tools_with_runtime(
-         )));
+@@ -681,6 +681,11 @@ pub fn all_tools_with_runtime(
+         }
      }
  
 +    // XMPP tools (conditionally registered when XMPP channel is configured)
