@@ -56,7 +56,7 @@ let
   # ZeroClaw config.toml content
   configToml = ''
     default_provider = "xai"
-    default_model = "grok-4-1-fast-reasoning"
+    default_model = "grok-4.20-beta-latest-non-reasoning"
     default_temperature = 0.7
 
     [agent]
@@ -88,7 +88,7 @@ let
     monthly_limit_usd = 100.0
     warn_at_percent = 80
 
-    [cost.prices."xai/grok-4-1-fast-reasoning"]
+    [cost.prices."xai/grok-4.20-beta-latest-non-reasoning"]
     input = 3.0
     output = 12.0
 
