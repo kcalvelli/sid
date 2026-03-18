@@ -79,7 +79,7 @@ let
     host = "0.0.0.0"
     port = ${toString cfg.port}
     require_pairing = true
-    allow_public_bind = false
+    allow_public_bind = true
     paired_tokens = ["GATEWAY_TOKEN_PLACEHOLDER"]
 
     [gateway.http.endpoints.chatCompletions]
