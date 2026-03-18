@@ -45,6 +45,7 @@
               ./patches/0009-feat-save-sent-emails-to-IMAP-Sent-folder.patch
               ./patches/0010-feat-add-channel-context-prefix-to-Telegram-messages.patch
               ./patches/0011-fix-preserve-conversation-context-in-Claude-Code-CLI.patch
+              ./patches/0012-fix-clamp-temperature-in-Claude-Code-provider.patch
             ];
 
             postPatch = ''
