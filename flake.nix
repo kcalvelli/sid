@@ -46,6 +46,8 @@
               ./patches/0010-feat-add-channel-context-prefix-to-Telegram-messages.patch
               ./patches/0011-fix-preserve-conversation-context-in-Claude-Code-CLI.patch
               ./patches/0012-fix-clamp-temperature-in-Claude-Code-provider.patch
+              ./patches/0013-fix-report-accurate-capabilities-for-Claude-Code.patch
+              ./patches/0014-fix-skip-permission-checks-in-Claude-Code-CLI.patch
             ];
 
             postPatch = ''
