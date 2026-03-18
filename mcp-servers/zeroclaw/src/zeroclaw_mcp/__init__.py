@@ -193,43 +193,36 @@ if XMPP_JID and XMPP_PASSWORD:
 
     @mcp.tool()
     async def xmpp_send(recipient: str, message: str) -> str:
-        """Send an XMPP message to a user or MUC room.
+        """Send an XMPP message to a MUC room.
+
+        Note: Only MUC rooms are supported. Direct messages are not available
+        via this tool (use Sid's native XMPP channel for DMs).
 
         Args:
-            recipient: JID of the recipient (user@host or room@conference.host)
+            recipient: MUC room JID (e.g. room@muc.chat.example.net)
             message: Message body to send
         """
         import slixmpp
 
-        is_muc = "conference" in recipient or "muc" in recipient
+        if "conference" not in recipient and "muc" not in recipient:
+            return "Error: Only MUC rooms are supported. Use a room JID (e.g. room@muc.chat.example.net)"
 
         class SendBot(slixmpp.ClientXMPP):
             def __init__(self):
                 super().__init__(XMPP_JID, XMPP_PASSWORD)
                 self.add_event_handler("session_start", self.on_start)
-                if is_muc:
-                    self.register_plugin("xep_0045")  # MUC
+                self.register_plugin("xep_0045")  # MUC
 
             async def on_start(self, _event):
-                if is_muc:
-                    self.send_presence()
-                    await self.plugin["xep_0045"].join_muc(
-                        recipient, self.boundjid.user
-                    )
-                    self.send_message(
-                        mto=recipient, mbody=message, mtype="groupchat"
-                    )
-                    await asyncio.sleep(0.5)
-                    self.disconnect()
-                else:
-                    # DMs: send without presence, then abort TCP
-                    # (graceful disconnect sends unavailable presence
-                    # which disrupts ZeroClaw's native XMPP session)
-                    self.send_message(
-                        mto=recipient, mbody=message, mtype="chat"
-                    )
-                    await asyncio.sleep(0.5)
-                    self.abort()
+                self.send_presence()
+                await self.plugin["xep_0045"].join_muc(
+                    recipient, self.boundjid.user
+                )
+                self.send_message(
+                    mto=recipient, mbody=message, mtype="groupchat"
+                )
+                await asyncio.sleep(0.5)
+                self.disconnect()
 
         import ssl
 
