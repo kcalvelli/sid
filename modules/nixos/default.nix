@@ -19,6 +19,8 @@ let
   xaiApiKeyFile = "/run/agenix/sid-xai-api-key";
   gatewayTokenFile = "/run/agenix/openclaw-gateway-token";
   githubPatFile = "/run/agenix/sid-github-pat";
+  pushoverUserKeyFile = "/run/agenix/sid-pushover-user-key";
+  pushoverApiTokenFile = "/run/agenix/sid-pushover-api-token";
 
   # Build telegram config section dynamically
   # ZeroClaw: presence of [channels_config.telegram] = enabled; absence = disabled
@@ -149,6 +151,12 @@ in
       type = lib.types.nullOr lib.types.package;
       default = null;
       description = "The mcp-gateway package providing mcp-gw CLI";
+    };
+
+    zeroclawMcpPackage = lib.mkOption {
+      type = lib.types.nullOr lib.types.package;
+      default = null;
+      description = "The zeroclaw-mcp package (MCP server bridging gateway tools to Claude Code)";
     };
 
     port = lib.mkOption {
@@ -339,6 +347,25 @@ in
           if [ -f "${githubPatFile}" ]; then
             echo "SID_GITHUB_TOKEN=$(cat ${githubPatFile})"
           fi
+          # ZeroClaw MCP server env vars
+          echo "ZEROCLAW_GATEWAY_URL=http://127.0.0.1:${toString cfg.port}"
+          if [ -f "${gatewayTokenFile}" ]; then
+            echo "ZEROCLAW_GATEWAY_TOKEN=$(cat ${gatewayTokenFile})"
+          fi
+          ${lib.optionalString cfg.xmpp.enable ''
+          echo "XMPP_JID=${cfg.xmpp.jid}"
+          if [ -f "${xmppPasswordFile}" ]; then
+            echo "XMPP_PASSWORD=$(cat ${xmppPasswordFile})"
+          fi
+          echo "XMPP_HOST=${cfg.xmpp.server}"
+          echo "XMPP_PORT=${toString cfg.xmpp.port}"
+          ''}
+          if [ -f "${pushoverUserKeyFile}" ]; then
+            echo "PUSHOVER_USER_KEY=$(cat ${pushoverUserKeyFile})"
+          fi
+          if [ -f "${pushoverApiTokenFile}" ]; then
+            echo "PUSHOVER_API_TOKEN=$(cat ${pushoverApiTokenFile})"
+          fi
         } > ${zeroclawDir}/env
         chown sid:sid ${zeroclawDir}/env
         chmod 0400 ${zeroclawDir}/env
@@ -386,6 +413,18 @@ in
                ''
              else
                cfg.mcpGatewayPackage
+           )
+           # ZeroClaw MCP server — wrapper bakes in env vars (ZeroClaw sanitizes env)
+           ++ lib.optional (cfg.zeroclawMcpPackage != null) (
+             pkgs.writeShellScriptBin "zeroclaw-mcp" ''
+               # Source env file for gateway token and credentials
+               if [ -f ${zeroclawDir}/env ]; then
+                 set -a
+                 . ${zeroclawDir}/env
+                 set +a
+               fi
+               exec ${cfg.zeroclawMcpPackage}/bin/zeroclaw-mcp "$@"
+             ''
            );
 
         serviceConfig = {
@@ -551,6 +590,25 @@ in
     (lib.mkIf (cfg.enable && cfg.xmpp.enable) {
       age.secrets.sid-xmpp-password = {
         file = secretsPath + /xmpp-password.age;
+        owner = "sid";
+        group = "sid";
+        mode = "0400";
+      };
+    })
+
+    # ── Pushover secrets (optional — only if .age files exist) ─────
+    (lib.mkIf (cfg.enable && builtins.pathExists (secretsPath + /pushover-user-key.age)) {
+      age.secrets.sid-pushover-user-key = {
+        file = secretsPath + /pushover-user-key.age;
+        owner = "sid";
+        group = "sid";
+        mode = "0400";
+      };
+    })
+
+    (lib.mkIf (cfg.enable && builtins.pathExists (secretsPath + /pushover-api-token.age)) {
+      age.secrets.sid-pushover-api-token = {
+        file = secretsPath + /pushover-api-token.age;
         owner = "sid";
         group = "sid";
         mode = "0400";

@@ -47,4 +47,17 @@ in
     mini
     keith
   ];
+
+  # Pushover push notification credentials
+  "pushover-user-key.age".publicKeys = [
+    edge
+    mini
+    keith
+  ];
+
+  "pushover-api-token.age".publicKeys = [
+    edge
+    mini
+    keith
+  ];
 }

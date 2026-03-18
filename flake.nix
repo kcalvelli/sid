@@ -69,6 +69,26 @@
             };
           };
 
+          zeroclaw-mcp = pkgs.python3Packages.buildPythonApplication {
+            pname = "zeroclaw-mcp";
+            version = "0.1.0";
+            pyproject = true;
+
+            src = ./mcp-servers/zeroclaw;
+
+            build-system = [ pkgs.python3Packages.hatchling ];
+            dependencies = with pkgs.python3Packages; [
+              mcp
+              httpx
+              slixmpp
+            ];
+
+            meta = {
+              description = "MCP server bridging ZeroClaw gateway tools to Claude Code";
+              mainProgram = "zeroclaw-mcp";
+            };
+          };
+
           default = self.packages.${system}.zeroclaw;
         });
 
