@@ -405,6 +405,7 @@ in
           # Environment
           Environment = [
             "HOME=${stateDir}"
+            "SHELL=${pkgs.bash}/bin/bash"
           ];
           EnvironmentFile = "${zeroclawDir}/env";
 
