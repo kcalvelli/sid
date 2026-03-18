@@ -211,25 +211,25 @@ if XMPP_JID and XMPP_PASSWORD:
                     self.register_plugin("xep_0045")  # MUC
 
             async def on_start(self, _event):
-                try:
-                    if is_muc:
-                        self.send_presence()
-                        await self.plugin["xep_0045"].join_muc(
-                            recipient, self.boundjid.user
-                        )
-                        self.send_message(
-                            mto=recipient, mbody=message, mtype="groupchat"
-                        )
-                    else:
-                        # DMs: skip presence to avoid disrupting ZeroClaw's
-                        # native XMPP session (same JID, different resource)
-                        self.send_message(
-                            mto=recipient, mbody=message, mtype="chat"
-                        )
-                finally:
-                    # Brief delay to ensure message is sent before disconnect
+                if is_muc:
+                    self.send_presence()
+                    await self.plugin["xep_0045"].join_muc(
+                        recipient, self.boundjid.user
+                    )
+                    self.send_message(
+                        mto=recipient, mbody=message, mtype="groupchat"
+                    )
                     await asyncio.sleep(0.5)
                     self.disconnect()
+                else:
+                    # DMs: send without presence, then abort TCP
+                    # (graceful disconnect sends unavailable presence
+                    # which disrupts ZeroClaw's native XMPP session)
+                    self.send_message(
+                        mto=recipient, mbody=message, mtype="chat"
+                    )
+                    await asyncio.sleep(0.5)
+                    self.abort()
 
         import ssl
 
