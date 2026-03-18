@@ -76,7 +76,7 @@ let
     interval_minutes = 120
 
     [gateway]
-    host = "127.0.0.1"
+    host = "0.0.0.0"
     port = ${toString cfg.port}
     require_pairing = true
     allow_public_bind = false
