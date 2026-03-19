@@ -4,11 +4,11 @@ Date: Mon, 16 Mar 2026 15:18:38 -0400
 Subject: [PATCH 10/10] feat: add channel context prefix to Telegram messages
 
 ---
- src/channels/telegram.rs | 9 +++++++++
- 1 file changed, 9 insertions(+)
+ src/channels/telegram.rs | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
 
 diff --git a/src/channels/telegram.rs b/src/channels/telegram.rs
-index fb9e01f7..bd75ca62 100644
+index 972a090..f07b657 100644
 --- a/src/channels/telegram.rs
 +++ b/src/channels/telegram.rs
 @@ -1,4 +1,10 @@
@@ -22,16 +22,19 @@ index fb9e01f7..bd75ca62 100644
  use crate::config::{Config, StreamMode};
  use crate::security::pairing::PairingGuard;
  use anyhow::Context;
-@@ -2652,6 +2658,9 @@ Ensure only one `zeroclaw` process is using this bot token."
+@@ -2710,6 +2716,12 @@ Ensure only one `zeroclaw` process is using this bot token."
                          .send()
                          .await; // Ignore errors for typing indicator
- 
+
 +                    // Inject channel context so the LLM knows the source
++                    // Skip for slash commands so runtime command parsing still works
 +                    let mut msg = msg;
-+                    msg.content = format!("{TELEGRAM_STYLE_PREFIX}{}", msg.content);
++                    if !msg.content.trim().starts_with('/') {
++                        msg.content = format!("{TELEGRAM_STYLE_PREFIX}{}", msg.content);
++                    }
                      if tx.send(msg).await.is_err() {
                          return Ok(());
                      }
--- 
+--
 2.53.0
 
