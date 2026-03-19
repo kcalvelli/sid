@@ -1,0 +1,72 @@
+From e857a2afc75d44f862b69e9d324af15e17f6c2c2 Mon Sep 17 00:00:00 2001
+From: Keith Calvelli <keith@calvelli.dev>
+Date: Thu, 19 Mar 2026 14:57:51 -0400
+Subject: [PATCH 15/15] fix(channels): clear persisted session on /new command
+
+The /new command only cleared the in-memory conversation history but
+left the persisted session file (JSONL) intact. On daemon restart, the
+old history was hydrated back from disk, and with the Claude Code
+backend, this resulted in very large context being passed with each
+message.
+
+Fix: clear_sender_history now also calls delete_session on the session
+store. Also implement delete_session for the JSONL SessionStore backend
+which was missing (only the SQLite backend had it).
+---
+ src/channels/mod.rs           |  7 +++++++
+ src/channels/session_store.rs | 14 ++++++++++++++
+ 2 files changed, 21 insertions(+)
+
+diff --git a/src/channels/mod.rs b/src/channels/mod.rs
+index 8f07a64..0c39f92 100644
+--- a/src/channels/mod.rs
++++ b/src/channels/mod.rs
+@@ -938,6 +938,13 @@ fn clear_sender_history(ctx: &ChannelRuntimeContext, sender_key: &str) {
+         .lock()
+         .unwrap_or_else(|e| e.into_inner())
+         .remove(sender_key);
++
++    // Also clear persisted session so history doesn't resurface after restart.
++    if let Some(ref store) = ctx.session_store {
++        if let Err(e) = store.delete_session(sender_key) {
++            tracing::warn!("Failed to delete persisted session on /new: {e}");
++        }
++    }
+ }
+
+ fn compact_sender_history(ctx: &ChannelRuntimeContext, sender_key: &str) -> bool {
+diff --git a/src/channels/session_store.rs b/src/channels/session_store.rs
+index a9149eb..bc678e5 100644
+--- a/src/channels/session_store.rs
++++ b/src/channels/session_store.rs
+@@ -125,6 +125,16 @@ impl SessionStore {
+             })
+             .collect()
+     }
++
++    /// Delete the JSONL session file for a given key.
++    pub fn delete_session(&self, session_key: &str) -> std::io::Result<bool> {
++        let path = self.session_path(session_key);
++        match std::fs::remove_file(&path) {
++            Ok(()) => Ok(true),
++            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(false),
++            Err(e) => Err(e),
++        }
++    }
+ }
+
+ impl SessionBackend for SessionStore {
+@@ -147,6 +157,10 @@ impl SessionBackend for SessionStore {
+     fn compact(&self, session_key: &str) -> std::io::Result<()> {
+         self.compact(session_key)
+     }
++
++    fn delete_session(&self, session_key: &str) -> std::io::Result<bool> {
++        self.delete_session(session_key)
++    }
+ }
+
+ #[cfg(test)]
+--
+2.53.0
+

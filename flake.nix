@@ -48,6 +48,7 @@
               ./patches/0012-fix-clamp-temperature-in-Claude-Code-provider.patch
               ./patches/0013-fix-report-accurate-capabilities-for-Claude-Code.patch
               ./patches/0014-fix-skip-permission-checks-in-Claude-Code-CLI.patch
+              ./patches/0015-fix-clear-persisted-session-on-new-command.patch
             ];
 
             postPatch = ''
