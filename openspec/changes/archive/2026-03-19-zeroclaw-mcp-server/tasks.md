@@ -45,7 +45,7 @@
 ## 8. Verification
 
 - [x] 8.1 Test MCP server starts and responds to tool list request via stdio
-- [ ] 8.2 Verify memory tools work end-to-end through mcp-gw → MCP server → gateway
-- [ ] 8.3 Verify cron tools work end-to-end through mcp-gw → MCP server → gateway
-- [ ] 8.4 Verify XMPP send works through mcp-gw → MCP server → XMPP server
-- [ ] 8.5 Verify Pushover send works through mcp-gw → MCP server → Pushover API
+- [x] 8.2 Verify memory tools work end-to-end through mcp-gw → MCP server → gateway
+- [x] 8.3 Verify cron tools work end-to-end through mcp-gw → MCP server → gateway
+- [x] 8.4 Verify XMPP send works through mcp-gw → MCP server → XMPP server
+- [x] 8.5 Verify Pushover send works through mcp-gw → MCP server → Pushover API
