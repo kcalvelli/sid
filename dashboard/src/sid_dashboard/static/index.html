@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sid Dashboard</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header>
+    <h1>Sid</h1>
+    <nav>
+      <button class="nav-btn active" data-tab="chat">Chat</button>
+      <button class="nav-btn" data-tab="memory">Memory</button>
+      <button class="nav-btn" data-tab="cron">Cron</button>
+    </nav>
+    <div id="status-indicator" class="status offline" title="Checking gateway..."></div>
+  </header>
+
+  <main>
+    <!-- Chat Tab -->
+    <section id="tab-chat" class="tab active">
+      <div id="chat-messages"></div>
+      <form id="chat-form">
+        <textarea id="chat-input" placeholder="Talk to Sid..." rows="2"></textarea>
+        <button type="submit" id="chat-send">Send</button>
+      </form>
+    </section>
+
+    <!-- Memory Tab -->
+    <section id="tab-memory" class="tab">
+      <div class="toolbar">
+        <input type="text" id="memory-search" placeholder="Search memories...">
+        <button id="memory-refresh" class="icon-btn" title="Refresh">&#x21bb;</button>
+      </div>
+      <div id="memory-list" class="card-list"></div>
+    </section>
+
+    <!-- Cron Tab -->
+    <section id="tab-cron" class="tab">
+      <div class="toolbar">
+        <button id="cron-refresh" class="icon-btn" title="Refresh">&#x21bb;</button>
+      </div>
+      <div id="cron-list" class="card-list"></div>
+    </section>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>

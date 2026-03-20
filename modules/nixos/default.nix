@@ -193,6 +193,28 @@ in
       enable = lib.mkEnableOption "PostgreSQL database for Sid (not needed when using SQLite memory backend)";
     };
 
+    dashboard = {
+      enable = lib.mkEnableOption "Sid web dashboard";
+
+      package = lib.mkOption {
+        type = lib.types.nullOr lib.types.package;
+        default = null;
+        description = "The sid-dashboard package to use";
+      };
+
+      port = lib.mkOption {
+        type = lib.types.port;
+        default = 8080;
+        description = "Dashboard web server port";
+      };
+
+      openFirewall = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = "Open firewall port for the dashboard";
+      };
+    };
+
     xmpp = {
       enable = lib.mkEnableOption "XMPP channel (native Prosody integration)";
       jid = lib.mkOption {
@@ -529,6 +551,61 @@ in
           ensureDBOwnership = true;
         }];
       };
+    })
+
+    # ── Dashboard service ────────────────────────────────────────────────
+    (lib.mkIf (cfg.enable && cfg.dashboard.enable) {
+      systemd.services.sid-dashboard = {
+        description = "Sid web dashboard";
+        after = [ "zeroclaw.service" ];
+        wants = [ "zeroclaw.service" ];
+        wantedBy = [ "multi-user.target" ];
+
+        serviceConfig = {
+          Type = "simple";
+          User = "sid";
+          Group = "sid";
+          ExecStart = "${cfg.dashboard.package}/bin/sid-dashboard";
+          Restart = "on-failure";
+          RestartSec = "5s";
+
+          Environment = [
+            "ZEROCLAW_GATEWAY_URL=http://127.0.0.1:${toString cfg.port}"
+            "SID_DASHBOARD_PORT=${toString cfg.dashboard.port}"
+            "SID_DASHBOARD_HOST=0.0.0.0"
+          ];
+          EnvironmentFile = "${zeroclawDir}/env";
+
+          # Hardening
+          ProtectHome = "tmpfs";
+          ProtectSystem = "strict";
+          PrivateTmp = true;
+          PrivateDevices = true;
+          NoNewPrivileges = true;
+          ProtectKernelTunables = true;
+          ProtectKernelModules = true;
+          ProtectKernelLogs = true;
+          ProtectControlGroups = true;
+          ProtectHostname = true;
+          ProtectClock = true;
+          RestrictRealtime = true;
+          RestrictSUIDSGID = true;
+          RemoveIPC = true;
+          LockPersonality = true;
+          ReadWritePaths = [ stateDir ];
+          CapabilityBoundingSet = "";
+          AmbientCapabilities = "";
+          RestrictAddressFamilies = [ "AF_INET" "AF_INET6" "AF_UNIX" ];
+          SystemCallFilter = [ "@system-service" ];
+          SystemCallArchitectures = "native";
+          RestrictNamespaces = true;
+          UMask = "0027";
+        };
+      };
+    })
+
+    (lib.mkIf (cfg.enable && cfg.dashboard.enable && cfg.dashboard.openFirewall) {
+      networking.firewall.allowedTCPPorts = [ cfg.dashboard.port ];
     })
 
     # ── Firewall ────────────────────────────────────────────────────────
