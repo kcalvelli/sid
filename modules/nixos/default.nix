@@ -21,6 +21,7 @@ let
   githubPatFile = "/run/agenix/sid-github-pat";
   pushoverUserKeyFile = "/run/agenix/sid-pushover-user-key";
   pushoverApiTokenFile = "/run/agenix/sid-pushover-api-token";
+  elevenlabsApiTokenFile = "/run/agenix/sid-elevenlabs-api-token";
 
   # Build telegram config section dynamically
   # ZeroClaw: presence of [channels_config.telegram] = enabled; absence = disabled
@@ -98,6 +99,18 @@ let
     [cost.prices."openai/gpt-4o"]
     input = 2.5
     output = 10.0
+
+    [tts]
+    enabled = true
+    default_provider = "elevenlabs"
+    default_voice = "ehKyeiSCZukmLY5dPNRm"
+    default_format = "mp3"
+
+    [tts.elevenlabs]
+    api_key = "ELEVENLABS_API_TOKEN_PLACEHOLDER"
+    model_id = "eleven_monolingual_v1"
+    stability = 0.5
+    similarity_boost = 0.5
 
     [autonomy]
     level = "full"
@@ -332,6 +345,11 @@ in
         if [ -f "${xmppPasswordFile}" ]; then
           XMPP_PASSWORD="$(cat "${xmppPasswordFile}")"
           ${pkgs.gnused}/bin/sed -i "s|XMPP_PASSWORD_PLACEHOLDER|$XMPP_PASSWORD|g" ${zeroclawDir}/config.toml
+        fi
+
+        if [ -f "${elevenlabsApiTokenFile}" ]; then
+          ELEVENLABS_TOKEN="$(cat "${elevenlabsApiTokenFile}")"
+          ${pkgs.gnused}/bin/sed -i "s|ELEVENLABS_API_TOKEN_PLACEHOLDER|$ELEVENLABS_TOKEN|g" ${zeroclawDir}/config.toml
         fi
 
         if [ -f "${emailPasswordFile}" ]; then
@@ -690,6 +708,16 @@ in
     (lib.mkIf (cfg.enable && builtins.pathExists (secretsPath + /pushover-api-token.age)) {
       age.secrets.sid-pushover-api-token = {
         file = secretsPath + /pushover-api-token.age;
+        owner = "sid";
+        group = "sid";
+        mode = "0400";
+      };
+    })
+
+    # ── ElevenLabs TTS API token ─────────────────────────────────────
+    (lib.mkIf (cfg.enable && builtins.pathExists (secretsPath + /elevenlabs-api-token.age)) {
+      age.secrets.sid-elevenlabs-api-token = {
+        file = secretsPath + /elevenlabs-api-token.age;
         owner = "sid";
         group = "sid";
         mode = "0400";
