@@ -322,6 +322,7 @@ impl XmppChannel {
                         .unwrap_or_default()
                         .as_secs(),
                     thread_ts: None,
+                    interruption_scope_id: None,
                 };
                 let _ = tx.send(channel_msg).await;
             }
@@ -364,6 +365,7 @@ impl XmppChannel {
                         .unwrap_or_default()
                         .as_secs(),
                     thread_ts: None,
+                    interruption_scope_id: None,
                 };
                 let _ = tx.send(channel_msg).await;
             }

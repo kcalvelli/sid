@@ -41,7 +41,7 @@ index 784826e..4f1fe07 100644
          temperature: f64,
      ) -> anyhow::Result<String> {
 -        Self::validate_temperature(temperature)?;
-+        let temperature = Self::clamp_temperature(temperature);
++        let _temperature = Self::clamp_temperature(temperature);
  
          let full_message = match system_prompt {
              Some(system) if !system.is_empty() => {
@@ -50,7 +50,7 @@ index 784826e..4f1fe07 100644
          temperature: f64,
      ) -> anyhow::Result<String> {
 -        Self::validate_temperature(temperature)?;
-+        let temperature = Self::clamp_temperature(temperature);
++        let _temperature = Self::clamp_temperature(temperature);
  
          // Separate system prompt from conversation messages.
          let system = messages
