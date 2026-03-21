@@ -59,6 +59,7 @@ let
   # ZeroClaw config.toml content
   configToml = ''
     default_provider = "openai-codex"
+    default_model = "gpt-5.4"
     default_temperature = 0.7
     fallback_providers = ["claude-code", "anthropic"]
 
