@@ -489,6 +489,7 @@ in
           Environment = [
             "HOME=${stateDir}"
             "SHELL=${pkgs.bash}/bin/bash"
+            "ZEROCLAW_GATEWAY_TIMEOUT_SECS=120"
           ];
           EnvironmentFile = "${zeroclawDir}/env";
 
