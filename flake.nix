@@ -4,7 +4,7 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     zeroclaw = {
-      url = "github:zeroclaw-labs/zeroclaw/v0.5.0";
+      url = "github:zeroclaw-labs/zeroclaw/v0.5.4";
       flake = false;  # source-only — we build it ourselves
     };
     agenix = {
@@ -26,7 +26,7 @@
         {
           zeroclaw = pkgs.rustPlatform.buildRustPackage {
             pname = "zeroclaw";
-            version = "0.5.0";
+            version = "0.5.4";
             src = zeroclaw;
 
             cargoLock.lockFile = zeroclaw + "/Cargo.lock";
@@ -44,11 +44,9 @@
               ./patches/0008-feat-preserve-email-subject-in-reply-threading.patch
               ./patches/0009-feat-save-sent-emails-to-IMAP-Sent-folder.patch
               ./patches/0010-feat-add-channel-context-prefix-to-Telegram-messages.patch
-              ./patches/0011-fix-preserve-conversation-context-in-Claude-Code-CLI.patch
-              ./patches/0012-fix-clamp-temperature-in-Claude-Code-provider.patch
-              ./patches/0013-fix-report-accurate-capabilities-for-Claude-Code.patch
-              ./patches/0014-fix-skip-permission-checks-in-Claude-Code-CLI.patch
-              ./patches/0015-fix-clear-persisted-session-on-new-command.patch
+              ./patches/0011-fix-clamp-temperature-in-Claude-Code-provider.patch
+              ./patches/0012-fix-report-accurate-capabilities-for-Claude-Code.patch
+              ./patches/0013-fix-skip-permission-checks-in-Claude-Code-CLI.patch
             ];
 
             postPatch = ''

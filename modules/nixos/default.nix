@@ -57,10 +57,10 @@ let
 
   # ZeroClaw config.toml content
   configToml = ''
-    default_provider = "claude-code"
-    default_model = "claude-opus-4-6"
+    default_provider = "openai-codex"
+    default_model = "gpt-4o"
     default_temperature = 0.7
-    fallback_providers = ["anthropic"]
+    fallback_providers = ["claude-code", "anthropic"]
 
     [agent]
     max_tool_iterations = 25
@@ -94,6 +94,10 @@ let
     [cost.prices."anthropic/claude-opus-4-6"]
     input = 15.0
     output = 75.0
+
+    [cost.prices."openai/gpt-4o"]
+    input = 2.5
+    output = 10.0
 
     [autonomy]
     level = "full"
@@ -424,7 +428,7 @@ in
           dnsutils     # dig, nslookup
           file         # file type detection
           tree         # directory listing
-          claude-code  # Claude Code CLI (claude-code provider)
+          claude-code  # Claude Code CLI (fallback provider)
         ]) ++ cfg.extraPackages
            ++ lib.optional (cfg.mcpGatewayPackage != null) (
              if cfg.mcpGatewayUrl != null then
