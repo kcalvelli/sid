@@ -60,4 +60,11 @@ in
     mini
     keith
   ];
+
+  "elevenlabs-api-token.age".publicKeys = [
+    edge
+    mini
+    keith
+  ];
+
 }
