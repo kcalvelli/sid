@@ -65,7 +65,7 @@
             postPatch = ''
               cp ${./patches/xmpp.rs} src/channels/xmpp.rs
               cp ${./patches/openai_proxy.rs} src/gateway/openai_proxy.rs
-              mkdir -p web
+              rm -rf web/dist
               ln -s ${zeroclaw-web} web/dist
             '';
 
