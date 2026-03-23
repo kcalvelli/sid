@@ -1,0 +1,155 @@
+From d849b8bf5cfe20ebe58e3037db83e0f7d3d13948 Mon Sep 17 00:00:00 2001
+From: Keith Calvelli <keith@calvelli.dev>
+Date: Mon, 23 Mar 2026 15:32:17 -0400
+Subject: [PATCH] feat: add per-SOP provider/model override for headless
+ execution
+
+---
+ src/sop/dispatch.rs | 88 +++++++++++++++++++++++++++++++++++++++++++++
+ src/sop/mod.rs      |  2 ++
+ src/sop/types.rs    | 10 ++++++
+ 3 files changed, 100 insertions(+)
+
+diff --git a/src/sop/dispatch.rs b/src/sop/dispatch.rs
+index 75f50ff..fa879eb 100644
+--- a/src/sop/dispatch.rs
++++ b/src/sop/dispatch.rs
+@@ -324,6 +324,94 @@ pub async fn check_sop_cron_triggers(
+     all_results
+ }
+ 
++// ── Autonomous SOP execution via provider override ──────────────────────
++
++/// Execute all steps of an SOP run autonomously using a dedicated provider.
++pub async fn execute_sop_with_provider(
++    engine: &mut super::engine::SopEngine,
++    run_id: &str,
++    sop: &super::types::Sop,
++    first_step: super::types::SopStep,
++) {
++    let provider_name = match &sop.provider {
++        Some(p) => p.clone(),
++        None => return,
++    };
++    let model = sop.model.clone().unwrap_or_else(|| "claude-haiku-4-5".into());
++
++    let provider = match crate::providers::create_provider(&provider_name, None) {
++        Ok(p) => p,
++        Err(e) => {
++            tracing::error!(
++                "SOP '{}' run {run_id}: failed to create provider '{}': {e}",
++                sop.name, provider_name,
++            );
++            return;
++        }
++    };
++
++    let mut current_step = first_step;
++    loop {
++        let step_prompt = format!(
++            "You are executing step {} of SOP '{}'.\n\n\
++             ## Step: {}\n\n{}\n\n\
++             Execute this step and return the result. Be precise and structured.",
++            current_step.number, sop.name, current_step.title, current_step.body,
++        );
++
++        let started_at = chrono::Utc::now().to_rfc3339();
++        let result = provider
++            .chat_with_system(
++                Some(&format!("You are a task executor for SOP '{}'.", sop.name)),
++                &step_prompt,
++                &model,
++                0.3,
++            )
++            .await;
++
++        let (status, output) = match result {
++            Ok(text) => (super::types::SopStepStatus::Completed, text),
++            Err(e) => (
++                super::types::SopStepStatus::Failed,
++                format!("Provider error: {e}"),
++            ),
++        };
++
++        let step_result = super::types::SopStepResult {
++            step_number: current_step.number,
++            status: status.clone(),
++            output,
++            started_at,
++            completed_at: Some(chrono::Utc::now().to_rfc3339()),
++        };
++
++        match engine.advance_step(run_id, step_result) {
++            Ok(super::types::SopRunAction::ExecuteStep { step, .. }) => {
++                current_step = step;
++            }
++            Ok(super::types::SopRunAction::Completed { sop_name, .. }) => {
++                tracing::info!("SOP '{sop_name}' run {run_id} completed autonomously");
++                return;
++            }
++            Ok(super::types::SopRunAction::Failed { sop_name, reason, .. }) => {
++                tracing::error!("SOP '{sop_name}' run {run_id} failed: {reason}");
++                return;
++            }
++            Ok(other) => {
++                tracing::warn!(
++                    "SOP '{}' run {run_id} unexpected action: {other:?}",
++                    sop.name
++                );
++                return;
++            }
++            Err(e) => {
++                tracing::error!("SOP '{}' run {run_id} advance error: {e}", sop.name);
++                return;
++            }
++        }
++    }
++}
++
+ // ── Tests ───────────────────────────────────────────────────────
+ 
+ #[cfg(test)]
+diff --git a/src/sop/mod.rs b/src/sop/mod.rs
+index be9f45d..5687fe6 100644
+--- a/src/sop/mod.rs
++++ b/src/sop/mod.rs
+@@ -125,6 +125,8 @@ fn load_sop(sop_dir: &Path, default_execution_mode: SopExecutionMode) -> Result<
+         cooldown_secs,
+         max_concurrent,
+         location: Some(sop_dir.to_path_buf()),
++        provider: manifest.sop.provider,
++        model: manifest.sop.model,
+     })
+ }
+ 
+diff --git a/src/sop/types.rs b/src/sop/types.rs
+index 0c995e0..1400488 100644
+--- a/src/sop/types.rs
++++ b/src/sop/types.rs
+@@ -125,6 +125,12 @@ pub struct Sop {
+     pub max_concurrent: u32,
+     #[serde(skip)]
+     pub location: Option<PathBuf>,
++    /// Optional provider override for headless execution.
++    #[serde(default)]
++    pub provider: Option<String>,
++    /// Optional model override (used with provider).
++    #[serde(default)]
++    pub model: Option<String>,
+ }
+ 
+ fn default_cooldown_secs() -> u64 {
+@@ -160,6 +166,10 @@ pub(crate) struct SopMeta {
+     pub cooldown_secs: u64,
+     #[serde(default = "default_max_concurrent")]
+     pub max_concurrent: u32,
++    #[serde(default)]
++    pub provider: Option<String>,
++    #[serde(default)]
++    pub model: Option<String>,
+ }
+ 
+ fn default_sop_version() -> String {
+-- 
+2.53.0
+

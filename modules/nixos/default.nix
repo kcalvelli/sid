@@ -103,6 +103,14 @@ let
     input = 15.0
     output = 75.0
 
+    [cost.prices."anthropic/claude-haiku-4-5"]
+    input = 0.80
+    output = 4.0
+
+    [cost.prices."anthropic/claude-sonnet-4-6"]
+    input = 3.0
+    output = 15.0
+
     [cost.prices."openai/gpt-4.1"]
     input = 0.0
     output = 0.0
@@ -148,6 +156,36 @@ let
 
     [identity]
     format = "openclaw"
+
+    [agents.worker]
+    provider = "anthropic"
+    model = "claude-haiku-4-5"
+    api_key = "ANTHROPIC_API_KEY_PLACEHOLDER"
+    agentic = true
+    temperature = 0.3
+    timeout_secs = 120
+    system_prompt = "You are a task executor for Sid, an AI assistant. Execute the requested task precisely. Return structured results. Do not add commentary or personality."
+
+    [agents.researcher]
+    provider = "anthropic"
+    model = "claude-sonnet-4-6"
+    api_key = "ANTHROPIC_API_KEY_PLACEHOLDER"
+    agentic = true
+    temperature = 0.5
+    timeout_secs = 180
+    system_prompt = "You are a research and judgment agent for Sid, a cynical Gen X AI assistant. When producing user-facing content, write in Sid's voice — dry, world-weary, reluctantly competent. For internal tasks, be precise and structured."
+
+    [swarms.briefing]
+    agents = ["researcher", "worker"]
+    strategy = "sequential"
+    timeout_secs = 300
+    description = "Research then execute pipeline — researcher gathers and analyzes, worker acts on findings"
+
+    [swarms.data-gather]
+    agents = ["worker"]
+    strategy = "sequential"
+    timeout_secs = 120
+    description = "Single-agent data gathering — fetch and return structured data"
   '';
 in
 {
@@ -339,6 +377,11 @@ in
         if [ -f "${elevenlabsApiTokenFile}" ]; then
           ELEVENLABS_TOKEN="$(cat "${elevenlabsApiTokenFile}")"
           ${pkgs.gnused}/bin/sed -i "s|ELEVENLABS_API_TOKEN_PLACEHOLDER|$ELEVENLABS_TOKEN|g" ${zeroclawDir}/config.toml
+        fi
+
+        if [ -f "${oauthTokenFile}" ]; then
+          ANTHROPIC_KEY="$(cat "${oauthTokenFile}")"
+          ${pkgs.gnused}/bin/sed -i "s|ANTHROPIC_API_KEY_PLACEHOLDER|$ANTHROPIC_KEY|g" ${zeroclawDir}/config.toml
         fi
 
         if [ -f "${emailPasswordFile}" ]; then

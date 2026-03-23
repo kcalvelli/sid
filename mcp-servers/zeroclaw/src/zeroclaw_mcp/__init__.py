@@ -46,7 +46,7 @@ async def _gateway_request(
 
     url = f"{GATEWAY_URL}{path}"
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        async with httpx.AsyncClient(timeout=120.0) as client:
             resp = await client.request(
                 method, url, headers=_gateway_headers(), **kwargs
             )
@@ -183,6 +183,65 @@ async def cron_run(job_id: str) -> str:
         return result
     import json
     return json.dumps(result, indent=2)
+
+
+# ---------------------------------------------------------------------------
+# Swarm orchestration tool
+# ---------------------------------------------------------------------------
+
+
+@mcp.tool()
+async def swarm_invoke(swarm: str, prompt: str, context: str | None = None) -> str:
+    """Invoke a ZeroClaw swarm to orchestrate delegate agents for a task.
+
+    Use this for multi-step tasks that need ZeroClaw's native tool access
+    (web_fetch, email, shell, memory, etc). For simple single-tool calls,
+    use the direct MCP tools instead.
+
+    Args:
+        swarm: Name of the swarm to invoke (e.g. "briefing", "data-gather")
+        prompt: The task/prompt to send to the swarm
+        context: Optional context to include (e.g. prior findings, relevant data)
+    """
+    payload: dict = {"swarm": swarm, "prompt": prompt}
+    if context:
+        payload["context"] = context
+    result = await _gateway_request("POST", "/api/swarm", json=payload)
+    if isinstance(result, str):
+        return result
+    import json
+    return json.dumps(result, indent=2)
+
+
+# ---------------------------------------------------------------------------
+# Canvas tool
+# ---------------------------------------------------------------------------
+
+
+@mcp.tool()
+async def canvas_update(html: str, canvas_id: str = "default") -> str:
+    """Push an HTML frame to the ZeroClaw dashboard canvas.
+
+    Use this to render visual content (weather displays, news briefs,
+    prototypes, charts, status boards) in the web dashboard.
+
+    Args:
+        html: HTML content to render. Empty string clears the canvas.
+        canvas_id: Canvas identifier (default: "default"). Use different
+                   IDs for independent canvas views.
+    """
+    if not html:
+        result = await _gateway_request("DELETE", f"/api/canvas/{canvas_id}")
+        if isinstance(result, str):
+            return result
+        return f"Cleared canvas: {canvas_id}"
+
+    result = await _gateway_request(
+        "POST", f"/api/canvas/{canvas_id}", json={"content": html}
+    )
+    if isinstance(result, str):
+        return result
+    return f"Updated canvas: {canvas_id}"
 
 
 # ---------------------------------------------------------------------------

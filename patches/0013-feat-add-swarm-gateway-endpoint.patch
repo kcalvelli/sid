@@ -1,0 +1,114 @@
+From 46472228105070b59fbfc1ce5a8f58dc8f4d7df0 Mon Sep 17 00:00:00 2001
+From: Keith Calvelli <keith@calvelli.dev>
+Date: Mon, 23 Mar 2026 15:30:02 -0400
+Subject: [PATCH] feat: add /api/swarm POST endpoint for MCP bridge
+
+---
+ src/gateway/api.rs | 80 ++++++++++++++++++++++++++++++++++++++++++++++
+ src/gateway/mod.rs |  2 ++
+ 2 files changed, 82 insertions(+)
+
+diff --git a/src/gateway/api.rs b/src/gateway/api.rs
+index 02dfcbe..e1bee87 100644
+--- a/src/gateway/api.rs
++++ b/src/gateway/api.rs
+@@ -2089,3 +2089,83 @@ mod tests {
+         assert!(crate::cron::list_jobs(&config).unwrap().is_empty());
+     }
+ }
++
++// ── Swarm orchestration endpoint ────────────────────────────────────────
++
++/// POST /api/swarm — invoke a named swarm and return results.
++///
++/// Request body: `{"swarm": "briefing", "prompt": "...", "context": "..."}`
++/// Response: `{"success": true, "output": "...", "error": null}`
++pub async fn handle_api_swarm(
++    State(state): State<AppState>,
++    Json(body): Json<serde_json::Value>,
++) -> impl IntoResponse {
++    let swarm_name = match body.get("swarm").and_then(|v| v.as_str()) {
++        Some(name) if !name.is_empty() => name.to_string(),
++        _ => {
++            return (
++                StatusCode::BAD_REQUEST,
++                Json(serde_json::json!({"error": "Missing or empty 'swarm' parameter"})),
++            )
++                .into_response();
++        }
++    };
++
++    let prompt = match body.get("prompt").and_then(|v| v.as_str()) {
++        Some(p) if !p.is_empty() => p.to_string(),
++        _ => {
++            return (
++                StatusCode::BAD_REQUEST,
++                Json(serde_json::json!({"error": "Missing or empty 'prompt' parameter"})),
++            )
++                .into_response();
++        }
++    };
++
++    let context = body
++        .get("context")
++        .and_then(|v| v.as_str())
++        .unwrap_or("")
++        .to_string();
++
++    let config = state.config.lock().clone();
++
++    let swarm_agents: std::collections::HashMap<String, crate::config::DelegateAgentConfig> =
++        config
++            .agents
++            .iter()
++            .filter(|(name, _)| config.swarms.values().any(|s| s.agents.contains(name)))
++            .map(|(k, v)| (k.clone(), v.clone()))
++            .collect();
++
++    let fallback_credential = config.api_key.clone();
++    let provider_runtime_options = crate::providers::ProviderRuntimeOptions::from_config(&config);
++
++    let swarm_tool = crate::tools::SwarmTool::new(
++        config.swarms.clone(),
++        swarm_agents,
++        fallback_credential,
++        std::sync::Arc::new(crate::security::policy::SecurityPolicy::permissive()),
++        provider_runtime_options,
++    );
++
++    let args = serde_json::json!({
++        "swarm": swarm_name,
++        "prompt": prompt,
++        "context": context,
++    });
++
++    match swarm_tool.execute(args).await {
++        Ok(result) => Json(serde_json::json!({
++            "success": result.success,
++            "output": result.output,
++            "error": result.error,
++        }))
++        .into_response(),
++        Err(e) => (
++            StatusCode::INTERNAL_SERVER_ERROR,
++            Json(serde_json::json!({"error": format!("Swarm execution failed: {e}")})),
++        )
++            .into_response(),
++    }
++}
+diff --git a/src/gateway/mod.rs b/src/gateway/mod.rs
+index 270217d..e2e9143 100644
+--- a/src/gateway/mod.rs
++++ b/src/gateway/mod.rs
+@@ -887,6 +887,8 @@ pub async fn run_gateway(host: &str, port: u16, config: Config) -> Result<()> {
+         .route("/api/health", get(api::handle_api_health))
+         .route("/api/sessions", get(api::handle_api_sessions_list))
+         .route("/api/sessions/{id}", delete(api::handle_api_session_delete).put(api::handle_api_session_rename))
++        // ── Swarm orchestration API ──
++        .route("/api/swarm", post(api::handle_api_swarm))
+         // ── Pairing + Device management API ──
+         .route("/api/pairing/initiate", post(api_pairing::initiate_pairing))
+         .route("/api/pair", post(api_pairing::submit_pairing_enhanced))
+-- 
+2.53.0
+
