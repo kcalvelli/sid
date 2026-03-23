@@ -45,15 +45,15 @@ index 9bd4e34..1b52eeb 100644
  use std::future::Future;
  use std::path::PathBuf;
  use tokio::task::JoinHandle;
-@@ -365,7 +365,7 @@ async fn run_heartbeat_worker(config: Config) -> Result<()> {
+@@ -374,7 +374,7 @@ async fn run_heartbeat_worker(config: Config) -> Result<()> {
          let mut tick_had_error = false;
          for task in &tasks_to_run {
              let task_start = std::time::Instant::now();
--            let prompt = format!("[Heartbeat Task | {}] {}", task.priority, task.text);
-+            let prompt = format!("[{}] [Heartbeat Task | {}] {}", chrono::Local::now().format("%Y-%m-%dT%H:%M:%S%:z"), task.priority, task.text);
-             let temp = config.default_temperature;
-             match Box::pin(crate::agent::run(
-                 config.clone(),
+-            let task_prompt = format!("[Heartbeat Task | {}] {}", task.priority, task.text);
++            let task_prompt = format!("[{}] [Heartbeat Task | {}] {}", chrono::Local::now().format("%Y-%m-%dT%H:%M:%S%:z"), task.priority, task.text);
+             let prompt = match &session_context {
+                 Some(ctx) => format!("{ctx}\n\n{task_prompt}"),
+                 None => task_prompt,
 diff --git a/src/gateway/mod.rs b/src/gateway/mod.rs
 index 63c3733..755bcd6 100644
 --- a/src/gateway/mod.rs

@@ -13,8 +13,8 @@ diff --git a/src/providers/claude_code.rs b/src/providers/claude_code.rs
 index 4f1fe07..bf1eea4 100644
 --- a/src/providers/claude_code.rs
 +++ b/src/providers/claude_code.rs
-@@ -185,6 +185,14 @@ impl Default for ClaudeCodeProvider {
- 
+@@ -204,6 +204,14 @@ impl Default for ClaudeCodeProvider {
+
  #[async_trait]
  impl Provider for ClaudeCodeProvider {
 +    fn capabilities(&self) -> crate::providers::traits::ProviderCapabilities {

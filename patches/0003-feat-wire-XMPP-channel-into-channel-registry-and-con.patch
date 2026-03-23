@@ -56,37 +56,41 @@ diff --git a/src/config/schema.rs b/src/config/schema.rs
 index dc9b2ae..c777abf 100644
 --- a/src/config/schema.rs
 +++ b/src/config/schema.rs
-@@ -4291,6 +4291,8 @@ pub struct ChannelsConfig {
+@@ -5167,6 +5167,8 @@ pub struct ChannelsConfig {
      pub reddit: Option<RedditConfig>,
      /// Bluesky channel configuration (AT Protocol).
      pub bluesky: Option<BlueskyConfig>,
 +    /// XMPP channel configuration.
 +    pub xmpp: Option<crate::channels::xmpp::XmppConfig>,
-     /// Base timeout in seconds for processing a single channel message (LLM + tools).
-     /// Runtime uses this as a per-turn budget that scales with tool-loop depth
-     /// (up to 4x, capped) so one slow/retried model call does not consume the
-@@ -4465,6 +4467,7 @@ impl Default for ChannelsConfig {
+     /// Voice wake word detection channel configuration.
+     #[cfg(feature = "voice-wake")]
+     pub voice_wake: Option<VoiceWakeConfig>,
+@@ -5355,6 +5357,7 @@ impl Default for ChannelsConfig {
              clawdtalk: None,
              reddit: None,
              bluesky: None,
 +            xmpp: None,
+             #[cfg(feature = "voice-wake")]
+             voice_wake: None,
              message_timeout_secs: default_channel_message_timeout_secs(),
-             ack_reactions: true,
-             show_tool_calls: false,
 diff --git a/src/tools/mod.rs b/src/tools/mod.rs
 index 7c5ae54..95d9ece 100644
 --- a/src/tools/mod.rs
 +++ b/src/tools/mod.rs
-@@ -681,6 +681,11 @@ pub fn all_tools_with_runtime(
+@@ -875,6 +875,11 @@ pub fn all_tools_with_runtime(
          }
      }
- 
+
 +    // XMPP tools (conditionally registered when XMPP channel is configured)
 +    if root_config.channels_config.xmpp.is_some() {
 +        tool_arcs.extend(crate::channels::xmpp::xmpp_tools());
 +    }
 +
-     (boxed_registry_from_arcs(tool_arcs), delegate_handle)
+     (
+         boxed_registry_from_arcs(tool_arcs),
+         delegate_handle,
+         Some(reaction_handle),
+     )
  }
  
 -- 
