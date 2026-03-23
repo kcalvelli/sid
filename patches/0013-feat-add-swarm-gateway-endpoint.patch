@@ -1,26 +1,18 @@
-From 70e6c733c0a9a56fd28ab27bb1e75c5b01b6b03b Mon Sep 17 00:00:00 2001
+From b59ac9874ec6a42a923414b8a6661455515f4358 Mon Sep 17 00:00:00 2001
 From: Keith Calvelli <keith@calvelli.dev>
-Date: Mon, 23 Mar 2026 15:49:12 -0400
+Date: Mon, 23 Mar 2026 16:11:42 -0400
 Subject: [PATCH] feat: add /api/swarm POST endpoint for MCP bridge
 
 ---
- src/gateway/api.rs | 78 ++++++++++++++++++++++++++++++++++++++++++++++
+ src/gateway/api.rs | 54 ++++++++++++++++++++++++++++++++++++++++++++++
  src/gateway/mod.rs |  2 ++
- 2 files changed, 80 insertions(+)
+ 2 files changed, 56 insertions(+)
 
 diff --git a/src/gateway/api.rs b/src/gateway/api.rs
-index 02dfcbe..d068075 100644
+index 02dfcbe..d636a39 100644
 --- a/src/gateway/api.rs
 +++ b/src/gateway/api.rs
-@@ -3,6 +3,7 @@
- //! All `/api/*` routes require bearer token authentication (PairingGuard).
- 
- use super::AppState;
-+use crate::tools::traits::Tool;
- use axum::{
-     extract::{Path, Query, State},
-     http::{header, HeaderMap, StatusCode},
-@@ -2089,3 +2090,80 @@ mod tests {
+@@ -2089,3 +2089,57 @@ mod tests {
          assert!(crate::cron::list_jobs(&config).unwrap().is_empty());
      }
  }
@@ -32,73 +24,50 @@ index 02dfcbe..d068075 100644
 +    State(state): State<AppState>,
 +    Json(body): Json<serde_json::Value>,
 +) -> impl IntoResponse {
++    use crate::tools::traits::Tool;
++
 +    let swarm_name = match body.get("swarm").and_then(|v| v.as_str()) {
 +        Some(name) if !name.is_empty() => name.to_string(),
 +        _ => {
-+            return (
-+                StatusCode::BAD_REQUEST,
-+                Json(serde_json::json!({"error": "Missing or empty 'swarm' parameter"})),
-+            )
-+                .into_response();
++            return (StatusCode::BAD_REQUEST, Json(serde_json::json!({"error": "Missing or empty 'swarm' parameter"}))).into_response();
 +        }
 +    };
 +
 +    let prompt = match body.get("prompt").and_then(|v| v.as_str()) {
 +        Some(p) if !p.is_empty() => p.to_string(),
 +        _ => {
-+            return (
-+                StatusCode::BAD_REQUEST,
-+                Json(serde_json::json!({"error": "Missing or empty 'prompt' parameter"})),
-+            )
-+                .into_response();
++            return (StatusCode::BAD_REQUEST, Json(serde_json::json!({"error": "Missing or empty 'prompt' parameter"}))).into_response();
 +        }
 +    };
 +
-+    let context = body
-+        .get("context")
-+        .and_then(|v| v.as_str())
-+        .unwrap_or("")
-+        .to_string();
-+
++    let context = body.get("context").and_then(|v| v.as_str()).unwrap_or("").to_string();
 +    let config = state.config.lock().clone();
 +
-+    let swarm_agents: std::collections::HashMap<String, crate::config::DelegateAgentConfig> =
-+        config
-+            .agents
-+            .iter()
-+            .filter(|(name, _)| config.swarms.values().any(|s| s.agents.contains(name)))
-+            .map(|(k, v)| (k.clone(), v.clone()))
-+            .collect();
++    let swarm_agents: std::collections::HashMap<String, crate::config::DelegateAgentConfig> = config
++        .agents.iter()
++        .filter(|(name, _)| config.swarms.values().any(|s| s.agents.contains(name)))
++        .map(|(k, v)| (k.clone(), v.clone()))
++        .collect();
 +
 +    let fallback_credential = config.api_key.clone();
-+    let provider_runtime_options = crate::providers::ProviderRuntimeOptions::from_config(&config);
++    let security = crate::security::policy::SecurityPolicy::from_config(
++        &config.autonomy,
++        std::path::Path::new(&config.workspace_dir),
++    );
 +
 +    let swarm_tool = crate::tools::SwarmTool::new(
 +        config.swarms.clone(),
 +        swarm_agents,
 +        fallback_credential,
-+        std::sync::Arc::new(crate::security::policy::SecurityPolicy::permissive()),
-+        provider_runtime_options,
++        std::sync::Arc::new(security),
++        crate::providers::ProviderRuntimeOptions::default(),
 +    );
 +
-+    let args = serde_json::json!({
-+        "swarm": swarm_name,
-+        "prompt": prompt,
-+        "context": context,
-+    });
++    let args = serde_json::json!({"swarm": swarm_name, "prompt": prompt, "context": context});
 +
 +    match swarm_tool.execute(args).await {
-+        Ok(result) => Json(serde_json::json!({
-+            "success": result.success,
-+            "output": result.output,
-+            "error": result.error,
-+        }))
-+        .into_response(),
-+        Err(e) => (
-+            StatusCode::INTERNAL_SERVER_ERROR,
-+            Json(serde_json::json!({"error": format!("Swarm execution failed: {e}")})),
-+        )
-+            .into_response(),
++        Ok(result) => Json(serde_json::json!({"success": result.success, "output": result.output, "error": result.error})).into_response(),
++        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": format!("Swarm execution failed: {e}")}))).into_response(),
 +    }
 +}
 diff --git a/src/gateway/mod.rs b/src/gateway/mod.rs
