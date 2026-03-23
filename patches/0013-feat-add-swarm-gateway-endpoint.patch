@@ -1,17 +1,15 @@
-From 2c369f1c938df1de624e3da387fe02ad7eeb87a8 Mon Sep 17 00:00:00 2001
+From 70e6c733c0a9a56fd28ab27bb1e75c5b01b6b03b Mon Sep 17 00:00:00 2001
 From: Keith Calvelli <keith@calvelli.dev>
-Date: Mon, 23 Mar 2026 15:32:17 -0400
+Date: Mon, 23 Mar 2026 15:49:12 -0400
 Subject: [PATCH] feat: add /api/swarm POST endpoint for MCP bridge
 
 ---
- src/gateway/api.rs  |  1 +
- src/sop/dispatch.rs | 88 +++++++++++++++++++++++++++++++++++++++++++++
- src/sop/mod.rs      |  2 ++
- src/sop/types.rs    | 10 ++++++
- 4 files changed, 101 insertions(+)
+ src/gateway/api.rs | 78 ++++++++++++++++++++++++++++++++++++++++++++++
+ src/gateway/mod.rs |  2 ++
+ 2 files changed, 80 insertions(+)
 
 diff --git a/src/gateway/api.rs b/src/gateway/api.rs
-index e1bee87..4c56fab 100644
+index 02dfcbe..d068075 100644
 --- a/src/gateway/api.rs
 +++ b/src/gateway/api.rs
 @@ -3,6 +3,7 @@
@@ -22,146 +20,100 @@ index e1bee87..4c56fab 100644
  use axum::{
      extract::{Path, Query, State},
      http::{header, HeaderMap, StatusCode},
-diff --git a/src/sop/dispatch.rs b/src/sop/dispatch.rs
-index 75f50ff..fa879eb 100644
---- a/src/sop/dispatch.rs
-+++ b/src/sop/dispatch.rs
-@@ -324,6 +324,94 @@ pub async fn check_sop_cron_triggers(
-     all_results
+@@ -2089,3 +2090,80 @@ mod tests {
+         assert!(crate::cron::list_jobs(&config).unwrap().is_empty());
+     }
  }
- 
-+// ── Autonomous SOP execution via provider override ──────────────────────
 +
-+/// Execute all steps of an SOP run autonomously using a dedicated provider.
-+pub async fn execute_sop_with_provider(
-+    engine: &mut super::engine::SopEngine,
-+    run_id: &str,
-+    sop: &super::types::Sop,
-+    first_step: super::types::SopStep,
-+) {
-+    let provider_name = match &sop.provider {
-+        Some(p) => p.clone(),
-+        None => return,
-+    };
-+    let model = sop.model.clone().unwrap_or_else(|| "claude-haiku-4-5".into());
++// ── Swarm orchestration endpoint ────────────────────────────────────────
 +
-+    let provider = match crate::providers::create_provider(&provider_name, None) {
-+        Ok(p) => p,
-+        Err(e) => {
-+            tracing::error!(
-+                "SOP '{}' run {run_id}: failed to create provider '{}': {e}",
-+                sop.name, provider_name,
-+            );
-+            return;
-+        }
-+    };
-+
-+    let mut current_step = first_step;
-+    loop {
-+        let step_prompt = format!(
-+            "You are executing step {} of SOP '{}'.\n\n\
-+             ## Step: {}\n\n{}\n\n\
-+             Execute this step and return the result. Be precise and structured.",
-+            current_step.number, sop.name, current_step.title, current_step.body,
-+        );
-+
-+        let started_at = chrono::Utc::now().to_rfc3339();
-+        let result = provider
-+            .chat_with_system(
-+                Some(&format!("You are a task executor for SOP '{}'.", sop.name)),
-+                &step_prompt,
-+                &model,
-+                0.3,
++/// POST /api/swarm — invoke a named swarm and return results.
++pub async fn handle_api_swarm(
++    State(state): State<AppState>,
++    Json(body): Json<serde_json::Value>,
++) -> impl IntoResponse {
++    let swarm_name = match body.get("swarm").and_then(|v| v.as_str()) {
++        Some(name) if !name.is_empty() => name.to_string(),
++        _ => {
++            return (
++                StatusCode::BAD_REQUEST,
++                Json(serde_json::json!({"error": "Missing or empty 'swarm' parameter"})),
 +            )
-+            .await;
-+
-+        let (status, output) = match result {
-+            Ok(text) => (super::types::SopStepStatus::Completed, text),
-+            Err(e) => (
-+                super::types::SopStepStatus::Failed,
-+                format!("Provider error: {e}"),
-+            ),
-+        };
-+
-+        let step_result = super::types::SopStepResult {
-+            step_number: current_step.number,
-+            status: status.clone(),
-+            output,
-+            started_at,
-+            completed_at: Some(chrono::Utc::now().to_rfc3339()),
-+        };
-+
-+        match engine.advance_step(run_id, step_result) {
-+            Ok(super::types::SopRunAction::ExecuteStep { step, .. }) => {
-+                current_step = step;
-+            }
-+            Ok(super::types::SopRunAction::Completed { sop_name, .. }) => {
-+                tracing::info!("SOP '{sop_name}' run {run_id} completed autonomously");
-+                return;
-+            }
-+            Ok(super::types::SopRunAction::Failed { sop_name, reason, .. }) => {
-+                tracing::error!("SOP '{sop_name}' run {run_id} failed: {reason}");
-+                return;
-+            }
-+            Ok(other) => {
-+                tracing::warn!(
-+                    "SOP '{}' run {run_id} unexpected action: {other:?}",
-+                    sop.name
-+                );
-+                return;
-+            }
-+            Err(e) => {
-+                tracing::error!("SOP '{}' run {run_id} advance error: {e}", sop.name);
-+                return;
-+            }
++                .into_response();
 +        }
++    };
++
++    let prompt = match body.get("prompt").and_then(|v| v.as_str()) {
++        Some(p) if !p.is_empty() => p.to_string(),
++        _ => {
++            return (
++                StatusCode::BAD_REQUEST,
++                Json(serde_json::json!({"error": "Missing or empty 'prompt' parameter"})),
++            )
++                .into_response();
++        }
++    };
++
++    let context = body
++        .get("context")
++        .and_then(|v| v.as_str())
++        .unwrap_or("")
++        .to_string();
++
++    let config = state.config.lock().clone();
++
++    let swarm_agents: std::collections::HashMap<String, crate::config::DelegateAgentConfig> =
++        config
++            .agents
++            .iter()
++            .filter(|(name, _)| config.swarms.values().any(|s| s.agents.contains(name)))
++            .map(|(k, v)| (k.clone(), v.clone()))
++            .collect();
++
++    let fallback_credential = config.api_key.clone();
++    let provider_runtime_options = crate::providers::ProviderRuntimeOptions::from_config(&config);
++
++    let swarm_tool = crate::tools::SwarmTool::new(
++        config.swarms.clone(),
++        swarm_agents,
++        fallback_credential,
++        std::sync::Arc::new(crate::security::policy::SecurityPolicy::permissive()),
++        provider_runtime_options,
++    );
++
++    let args = serde_json::json!({
++        "swarm": swarm_name,
++        "prompt": prompt,
++        "context": context,
++    });
++
++    match swarm_tool.execute(args).await {
++        Ok(result) => Json(serde_json::json!({
++            "success": result.success,
++            "output": result.output,
++            "error": result.error,
++        }))
++        .into_response(),
++        Err(e) => (
++            StatusCode::INTERNAL_SERVER_ERROR,
++            Json(serde_json::json!({"error": format!("Swarm execution failed: {e}")})),
++        )
++            .into_response(),
 +    }
 +}
-+
- // ── Tests ───────────────────────────────────────────────────────
- 
- #[cfg(test)]
-diff --git a/src/sop/mod.rs b/src/sop/mod.rs
-index be9f45d..5687fe6 100644
---- a/src/sop/mod.rs
-+++ b/src/sop/mod.rs
-@@ -125,6 +125,8 @@ fn load_sop(sop_dir: &Path, default_execution_mode: SopExecutionMode) -> Result<
-         cooldown_secs,
-         max_concurrent,
-         location: Some(sop_dir.to_path_buf()),
-+        provider: manifest.sop.provider,
-+        model: manifest.sop.model,
-     })
- }
- 
-diff --git a/src/sop/types.rs b/src/sop/types.rs
-index 0c995e0..1400488 100644
---- a/src/sop/types.rs
-+++ b/src/sop/types.rs
-@@ -125,6 +125,12 @@ pub struct Sop {
-     pub max_concurrent: u32,
-     #[serde(skip)]
-     pub location: Option<PathBuf>,
-+    /// Optional provider override for headless execution.
-+    #[serde(default)]
-+    pub provider: Option<String>,
-+    /// Optional model override (used with provider).
-+    #[serde(default)]
-+    pub model: Option<String>,
- }
- 
- fn default_cooldown_secs() -> u64 {
-@@ -160,6 +166,10 @@ pub(crate) struct SopMeta {
-     pub cooldown_secs: u64,
-     #[serde(default = "default_max_concurrent")]
-     pub max_concurrent: u32,
-+    #[serde(default)]
-+    pub provider: Option<String>,
-+    #[serde(default)]
-+    pub model: Option<String>,
- }
- 
- fn default_sop_version() -> String {
+diff --git a/src/gateway/mod.rs b/src/gateway/mod.rs
+index 270217d..e2e9143 100644
+--- a/src/gateway/mod.rs
++++ b/src/gateway/mod.rs
+@@ -887,6 +887,8 @@ pub async fn run_gateway(host: &str, port: u16, config: Config) -> Result<()> {
+         .route("/api/health", get(api::handle_api_health))
+         .route("/api/sessions", get(api::handle_api_sessions_list))
+         .route("/api/sessions/{id}", delete(api::handle_api_session_delete).put(api::handle_api_session_rename))
++        // ── Swarm orchestration API ──
++        .route("/api/swarm", post(api::handle_api_swarm))
+         // ── Pairing + Device management API ──
+         .route("/api/pairing/initiate", post(api_pairing::initiate_pairing))
+         .route("/api/pair", post(api_pairing::submit_pairing_enhanced))
 -- 
 2.53.0
 

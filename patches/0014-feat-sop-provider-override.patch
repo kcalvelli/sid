@@ -1,6 +1,6 @@
-From d849b8bf5cfe20ebe58e3037db83e0f7d3d13948 Mon Sep 17 00:00:00 2001
+From 08dd667cddb1f0b194d44581984ee225ad5e1075 Mon Sep 17 00:00:00 2001
 From: Keith Calvelli <keith@calvelli.dev>
-Date: Mon, 23 Mar 2026 15:32:17 -0400
+Date: Mon, 23 Mar 2026 15:52:20 -0400
 Subject: [PATCH] feat: add per-SOP provider/model override for headless
  execution
 
