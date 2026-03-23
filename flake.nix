@@ -22,6 +22,20 @@
       packages = forAllSystems (system:
         let
           pkgs = nixpkgs.legacyPackages.${system};
+          lib = pkgs.lib;
+
+          zeroclaw-web = pkgs.buildNpmPackage {
+            pname = "zeroclaw-web";
+            version = "0.5.9";
+            src = zeroclaw;
+            sourceRoot = "source/web";
+            npmDepsHash = "sha256-4+raDJ7+w+RpdeZs2PJL10IWzfoT5B3EpOxsLUnlrRc=";
+            installPhase = ''
+              runHook preInstall
+              cp -r dist $out
+              runHook postInstall
+            '';
+          };
         in
         {
           zeroclaw = pkgs.rustPlatform.buildRustPackage {
@@ -29,7 +43,7 @@
             version = "0.5.9";
             src = zeroclaw;
 
-            cargoLock.lockFile = zeroclaw + "/Cargo.lock";
+            cargoHash = "sha256-cdlD2GEOZTuOA/JeDGFokTVRZ2aozpuIGJwlDiiPNmE=";
 
             buildFeatures = [ "memory-postgres" ];
 
@@ -51,6 +65,8 @@
             postPatch = ''
               cp ${./patches/xmpp.rs} src/channels/xmpp.rs
               cp ${./patches/openai_proxy.rs} src/gateway/openai_proxy.rs
+              mkdir -p web
+              ln -s ${zeroclaw-web} web/dist
             '';
 
             nativeBuildInputs = with pkgs; [ pkg-config ];
