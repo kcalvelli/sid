@@ -103,24 +103,6 @@
             };
           };
 
-          sid-dashboard = pkgs.python3Packages.buildPythonApplication {
-            pname = "sid-dashboard";
-            version = "0.1.0";
-            pyproject = true;
-
-            src = ./dashboard;
-
-            build-system = [ pkgs.python3Packages.hatchling ];
-            dependencies = with pkgs.python3Packages; [
-              httpx
-            ];
-
-            meta = {
-              description = "Web dashboard for Sid AI agent";
-              mainProgram = "sid-dashboard";
-            };
-          };
-
           default = self.packages.${system}.zeroclaw;
         });
 
