@@ -1,14 +1,14 @@
-From 08dd667cddb1f0b194d44581984ee225ad5e1075 Mon Sep 17 00:00:00 2001
+From 9126a87243b804ef48b233d10160efc2ebbae1fb Mon Sep 17 00:00:00 2001
 From: Keith Calvelli <keith@calvelli.dev>
-Date: Mon, 23 Mar 2026 15:52:20 -0400
+Date: Mon, 23 Mar 2026 16:07:35 -0400
 Subject: [PATCH] feat: add per-SOP provider/model override for headless
  execution
 
 ---
  src/sop/dispatch.rs | 88 +++++++++++++++++++++++++++++++++++++++++++++
  src/sop/mod.rs      |  2 ++
- src/sop/types.rs    | 10 ++++++
- 3 files changed, 100 insertions(+)
+ src/sop/types.rs    | 14 ++++++++
+ 3 files changed, 104 insertions(+)
 
 diff --git a/src/sop/dispatch.rs b/src/sop/dispatch.rs
 index 75f50ff..fa879eb 100644
@@ -123,11 +123,17 @@ index be9f45d..5687fe6 100644
  }
  
 diff --git a/src/sop/types.rs b/src/sop/types.rs
-index 0c995e0..1400488 100644
+index 0c995e0..e625aa3 100644
 --- a/src/sop/types.rs
 +++ b/src/sop/types.rs
-@@ -125,6 +125,12 @@ pub struct Sop {
+@@ -123,8 +123,18 @@ pub struct Sop {
+     pub cooldown_secs: u64,
+     #[serde(default = "default_max_concurrent")]
      pub max_concurrent: u32,
++    #[serde(default)]
++    pub provider: Option<String>,
++    #[serde(default)]
++    pub model: Option<String>,
      #[serde(skip)]
      pub location: Option<PathBuf>,
 +    /// Optional provider override for headless execution.
@@ -139,7 +145,7 @@ index 0c995e0..1400488 100644
  }
  
  fn default_cooldown_secs() -> u64 {
-@@ -160,6 +166,10 @@ pub(crate) struct SopMeta {
+@@ -160,6 +170,10 @@ pub(crate) struct SopMeta {
      pub cooldown_secs: u64,
      #[serde(default = "default_max_concurrent")]
      pub max_concurrent: u32,

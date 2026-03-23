@@ -15,7 +15,7 @@
 
 - [x] 3.1 Add `swarm_invoke(swarm, prompt)` tool to zeroclaw-mcp: POST to gateway swarm endpoint, return structured results with step outputs and errors
 - [x] 3.2 Add `canvas_update(html, canvas_id?)` tool to zeroclaw-mcp: POST/PUT to gateway canvas endpoint, support named canvases and clearing
-- [ ] 3.3 Test swarm_invoke end-to-end: Sid dispatches to worker via MCP, worker executes with ZeroClaw tools, result returns to Sid
+- [x] 3.3 Test swarm_invoke end-to-end: Sid dispatches to worker via MCP, worker executes with ZeroClaw tools, result returns to Sid
 
 ## 4. SOP provider override patch
 
@@ -31,8 +31,15 @@
 
 ## 6. Validate and test
 
-- [ ] 6.1 Deploy and verify delegate agents load (check daemon logs)
-- [ ] 6.2 Test swarm_invoke from Sid via Telegram: dispatch a data-gather swarm, verify result returns
+- [x] 6.1 Deploy and verify delegate agents load (check daemon logs)
+- [x] 6.2 Test swarm_invoke from Sid via Telegram: dispatch a data-gather swarm, verify result returns
 - [ ] 6.3 Test canvas_update from Sid: push an HTML frame, verify dashboard renders it
 - [ ] 6.4 Test SOP execution: manually trigger morning-briefing SOP, verify it runs on Sonnet with native tools
 - [ ] 6.5 Test failure notification: trigger a SOP with a bad tool call, verify Pushover notification arrives
+
+## 7. Follow-up TODOs
+
+- [ ] 7.1 Patch SwarmTool to use agentic agent loop (agent::run) instead of chat_with_system — enables workers to use ZeroClaw tools (shell, web_fetch, email, memory, etc.)
+- [ ] 7.2 Fix dashboard Canvas WebSocket auth — live rendering fails because WebSocket upgrade doesn't pass bearer token correctly. REST API works, only live view is broken. Upstream dashboard limitation.
+- [ ] 7.3 Test SOP autonomous execution via cron trigger (wait for morning-briefing at 06:30 ET or manually trigger)
+- [ ] 7.4 Add Pushover notification on SOP failure (task 5.1)
