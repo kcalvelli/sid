@@ -61,10 +61,12 @@ let
     default_provider = "claude-code"
     default_model = "claude-opus-4-6"
     default_temperature = 0.7
-    fallback_providers = ["anthropic"]
 
     [agent]
     max_tool_iterations = 25
+
+    [reliability]
+    fallback_providers = ["anthropic"]
 
     [memory]
     backend = "sqlite"
@@ -75,13 +77,6 @@ let
     [heartbeat]
     enabled = false
     interval_minutes = 120
-
-    [sop]
-    enabled = true
-    sops_dir = "${stateDir}/.zeroclaw/workspace/sops"
-    default_execution_mode = "supervised"
-    approval_timeout_secs = 300
-    max_concurrent_total = 5
 
     [gateway]
     host = "0.0.0.0"
