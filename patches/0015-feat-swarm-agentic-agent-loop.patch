@@ -9,14 +9,14 @@ gives workers access to the entire ZeroClaw tool registry (shell,
 web_fetch, email, memory, etc.) enabling genuine multi-step execution.
 
 ---
- src/tools/swarm.rs | 52 ++++++++++++++++++++++++++++++++++++++++++++--
- 1 file changed, 50 insertions(+), 2 deletions(-)
+ src/tools/swarm.rs | 72 ++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 72 insertions(+)
 
 diff --git a/src/tools/swarm.rs b/src/tools/swarm.rs
 index 75f50ff..aabbccd 100644
 --- a/src/tools/swarm.rs
 +++ b/src/tools/swarm.rs
-@@ -17,6 +17,7 @@ pub struct SwarmTool {
+@@ -20,6 +20,7 @@
      security: Arc<SecurityPolicy>,
      fallback_credential: Option<String>,
      provider_runtime_options: providers::ProviderRuntimeOptions,
@@ -24,7 +24,7 @@ index 75f50ff..aabbccd 100644
  }
 
  impl SwarmTool {
-@@ -33,6 +34,22 @@ impl SwarmTool {
+@@ -36,6 +37,26 @@
              security,
              fallback_credential,
              provider_runtime_options,
@@ -51,12 +51,10 @@ index 75f50ff..aabbccd 100644
          }
      }
 
-@@ -67,8 +84,15 @@ impl SwarmTool {
+@@ -71,6 +92,14 @@
          prompt: &str,
          timeout_secs: u64,
      ) -> Result<String, String> {
--        let provider = self
--            .create_provider_for_agent(agent_config, agent_name)
 +        // Agentic path: full agent loop with ZeroClaw tools.
 +        if agent_config.agentic {
 +            return self
@@ -65,11 +63,10 @@ index 75f50ff..aabbccd 100644
 +        }
 +
 +        // Non-agentic path: single LLM call.
-+        let provider = self.create_provider_for_agent(agent_config, agent_name)
+         let provider = self
+             .create_provider_for_agent(agent_config, agent_name)
              .map_err(|r| r.error.unwrap_or_default())?;
-
-         let temperature = agent_config.temperature.unwrap_or(0.7);
-@@ -99,6 +123,50 @@ impl SwarmTool {
+@@ -103,6 +132,57 @@
          }
      }
 

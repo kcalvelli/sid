@@ -5,19 +5,19 @@ Subject: [PATCH] feat: add per-SOP provider/model override for headless
  execution with failure notifications
 
 ---
- src/sop/dispatch.rs | 120 +++++++++++++++++++++++++++++++++++++++++++++
- src/sop/mod.rs      |  2 ++
- src/sop/types.rs    | 14 ++++++++
- 3 files changed, 136 insertions(+)
+ src/sop/dispatch.rs | 125 ++++++++++++++++++++++++++++++++++++++++++++
+ src/sop/mod.rs      |   2 +
+ src/sop/types.rs    |  10 ++++
+ 3 files changed, 137 insertions(+)
 
 diff --git a/src/sop/dispatch.rs b/src/sop/dispatch.rs
 index 75f50ff..fa879eb 100644
 --- a/src/sop/dispatch.rs
 +++ b/src/sop/dispatch.rs
-@@ -324,6 +324,94 @@ pub async fn check_sop_cron_triggers(
+@@ -324,6 +324,131 @@ pub async fn check_sop_cron_triggers(
      all_results
  }
- 
+
 +// ── SOP failure notification via Pushover ────────────────────────────────
 +
 +/// Send a Pushover notification for SOP failure (fire-and-forget).
@@ -144,7 +144,7 @@ index 75f50ff..fa879eb 100644
 +}
 +
  // ── Tests ───────────────────────────────────────────────────────
- 
+
  #[cfg(test)]
 diff --git a/src/sop/mod.rs b/src/sop/mod.rs
 index be9f45d..5687fe6 100644
@@ -158,12 +158,12 @@ index be9f45d..5687fe6 100644
 +        model: manifest.sop.model,
      })
  }
- 
+
 diff --git a/src/sop/types.rs b/src/sop/types.rs
 index 0c995e0..e625aa3 100644
 --- a/src/sop/types.rs
 +++ b/src/sop/types.rs
-@@ -123,8 +123,18 @@ pub struct Sop {
+@@ -123,6 +123,12 @@ pub struct Sop {
      pub cooldown_secs: u64,
      #[serde(default = "default_max_concurrent")]
      pub max_concurrent: u32,
@@ -176,9 +176,7 @@ index 0c995e0..e625aa3 100644
      #[serde(skip)]
      pub location: Option<PathBuf>,
  }
- 
- fn default_cooldown_secs() -> u64 {
-@@ -160,6 +170,10 @@ pub(crate) struct SopMeta {
+@@ -160,6 +166,10 @@ pub(crate) struct SopMeta {
      pub cooldown_secs: u64,
      #[serde(default = "default_max_concurrent")]
      pub max_concurrent: u32,
@@ -187,8 +185,8 @@ index 0c995e0..e625aa3 100644
 +    #[serde(default)]
 +    pub model: Option<String>,
  }
- 
+
  fn default_sop_version() -> String {
--- 
+--
 2.53.0
 
