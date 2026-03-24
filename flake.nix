@@ -4,7 +4,7 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     zeroclaw = {
-      url = "github:zeroclaw-labs/zeroclaw/v0.5.9";
+      url = "github:zeroclaw-labs/zeroclaw/v0.6.2";
       flake = false;  # source-only — we build it ourselves
     };
     agenix = {
@@ -26,7 +26,7 @@
 
           zeroclaw-web = pkgs.buildNpmPackage {
             pname = "zeroclaw-web";
-            version = "0.5.9";
+            version = "0.6.2";
             src = zeroclaw;
             sourceRoot = "source/web";
             npmDepsHash = "sha256-4+raDJ7+w+RpdeZs2PJL10IWzfoT5B3EpOxsLUnlrRc=";
@@ -40,10 +40,10 @@
         {
           zeroclaw = pkgs.rustPlatform.buildRustPackage {
             pname = "zeroclaw";
-            version = "0.5.9";
+            version = "0.6.2";
             src = zeroclaw;
 
-            cargoHash = "sha256-cdlD2GEOZTuOA/JeDGFokTVRZ2aozpuIGJwlDiiPNmE=";
+            cargoHash = "sha256-2v4bIDgW73RnvkZ1ZP50W09kuyVTLlVPLDEI4BLGdZg=";
 
             buildFeatures = [ "memory-postgres" ];
 

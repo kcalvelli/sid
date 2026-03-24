@@ -6,15 +6,15 @@ Subject: [PATCH] feat: add per-SOP provider/model override for headless
 
 ---
  src/sop/dispatch.rs | 125 ++++++++++++++++++++++++++++++++++++++++++++
- src/sop/mod.rs      |   2 +
+ src/sop/mod.rs      |   4 ++
  src/sop/types.rs    |  10 ++++
- 3 files changed, 137 insertions(+)
+ 3 files changed, 139 insertions(+)
 
 diff --git a/src/sop/dispatch.rs b/src/sop/dispatch.rs
 index 75f50ff..fa879eb 100644
 --- a/src/sop/dispatch.rs
 +++ b/src/sop/dispatch.rs
-@@ -324,6 +324,131 @@ pub async fn check_sop_cron_triggers(
+@@ -345,6 +345,131 @@ pub async fn check_sop_cron_triggers(
      all_results
  }
 
@@ -150,12 +150,21 @@ diff --git a/src/sop/mod.rs b/src/sop/mod.rs
 index be9f45d..5687fe6 100644
 --- a/src/sop/mod.rs
 +++ b/src/sop/mod.rs
-@@ -125,6 +125,8 @@ fn load_sop(sop_dir: &Path, default_execution_mode: SopExecutionMode) -> Result<
+@@ -123,6 +123,8 @@ fn load_sop(sop_dir: &Path, default_execution_mode: SopExecutionMode) -> Result<
          cooldown_secs,
          max_concurrent,
+         deterministic,
++        provider,
++        model,
+     } = manifest.sop;
+
+     // When deterministic=true, override execution_mode to Deterministic
+@@ -144,6 +146,8 @@ fn load_sop(sop_dir: &Path, default_execution_mode: SopExecutionMode) -> Result<
+         max_concurrent,
          location: Some(sop_dir.to_path_buf()),
-+        provider: manifest.sop.provider,
-+        model: manifest.sop.model,
+         deterministic,
++        provider,
++        model,
      })
  }
 
@@ -163,7 +172,7 @@ diff --git a/src/sop/types.rs b/src/sop/types.rs
 index 0c995e0..e625aa3 100644
 --- a/src/sop/types.rs
 +++ b/src/sop/types.rs
-@@ -123,6 +123,12 @@ pub struct Sop {
+@@ -173,6 +173,12 @@ pub struct Sop {
      pub cooldown_secs: u64,
      #[serde(default = "default_max_concurrent")]
      pub max_concurrent: u32,
@@ -175,8 +184,8 @@ index 0c995e0..e625aa3 100644
 +    pub model: Option<String>,
      #[serde(skip)]
      pub location: Option<PathBuf>,
- }
-@@ -160,6 +166,10 @@ pub(crate) struct SopMeta {
+     /// When true, sets execution_mode to Deterministic.
+@@ -214,6 +220,10 @@ pub(crate) struct SopMeta {
      pub cooldown_secs: u64,
      #[serde(default = "default_max_concurrent")]
      pub max_concurrent: u32,
@@ -184,9 +193,9 @@ index 0c995e0..e625aa3 100644
 +    pub provider: Option<String>,
 +    #[serde(default)]
 +    pub model: Option<String>,
- }
-
- fn default_sop_version() -> String {
+     /// Opt-in deterministic execution (no LLM round-trips between steps).
+     #[serde(default)]
+     pub deterministic: bool,
 --
 2.53.0
 

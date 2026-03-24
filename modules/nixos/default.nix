@@ -61,9 +61,14 @@ let
     default_provider = "claude-code"
     default_model = "claude-opus-4-6"
     default_temperature = 0.7
+    parallel_tools = true
 
     [agent]
     max_tool_iterations = 25
+
+    [data_retention]
+    enabled = true
+    max_age_days = 90
 
     [reliability]
     fallback_providers = ["anthropic"]

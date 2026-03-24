@@ -323,6 +323,7 @@ impl XmppChannel {
                         .as_secs(),
                     thread_ts: None,
                     interruption_scope_id: None,
+                    attachments: vec![],
                 };
                 let _ = tx.send(channel_msg).await;
             }
@@ -366,6 +367,7 @@ impl XmppChannel {
                         .as_secs(),
                     thread_ts: None,
                     interruption_scope_id: None,
+                    attachments: vec![],
                 };
                 let _ = tx.send(channel_msg).await;
             }
