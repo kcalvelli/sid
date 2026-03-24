@@ -142,6 +142,15 @@ let
 
     ${xmppConfig}
 
+    [mcp]
+    enabled = true
+    deferred_loading = true
+
+    [[mcp.servers]]
+    name = "zeroclaw-mcp"
+    transport = "stdio"
+    command = "zeroclaw-mcp"
+
     [web_fetch]
     enabled = true
     allowed_domains = ["*"]
