@@ -34,12 +34,14 @@
 - [x] 6.1 Deploy and verify delegate agents load (check daemon logs)
 - [x] 6.2 Test swarm_invoke from Sid via Telegram: dispatch a data-gather swarm, verify result returns
 - [ ] 6.3 Test canvas_update from Sid: push an HTML frame, verify dashboard renders it
-- [ ] 6.4 Test SOP execution: manually trigger morning-briefing SOP, verify it runs on Sonnet with native tools
-- [ ] 6.5 Test failure notification: trigger a SOP with a bad tool call, verify Pushover notification arrives
+- [x] 6.4 Test SOP execution: manually trigger morning-briefing SOP, verify it runs on Sonnet with native tools (ran via sop_execute tool — executed through Sid/Claude Code path, not headless)
+- [ ] 6.5 Test failure notification: trigger a SOP with a bad tool call, verify Pushover notification arrives — BLOCKED: SOP cron dispatch loop not wired into gateway (see 7.5)
 
 ## 7. Follow-up TODOs
 
 - [x] 7.1 Patch SwarmTool to use agentic agent loop (agent::run) instead of chat_with_system — enables workers to use ZeroClaw tools (shell, web_fetch, email, memory, etc.)
-- [ ] 7.2 Fix dashboard Canvas WebSocket auth — live rendering fails because WebSocket upgrade doesn't pass bearer token correctly. REST API works, only live view is broken. Upstream dashboard limitation.
-- [ ] 7.3 Test SOP autonomous execution via cron trigger (wait for morning-briefing at 06:30 ET or manually trigger)
+- [ ] 7.2 Fix dashboard Canvas WebSocket auth — live rendering fails because WebSocket upgrade doesn't pass bearer token correctly. REST API works, only live view is broken. Upstream bug zeroclaw-labs/zeroclaw#2168 (stale web/dist assets).
+- [ ] 7.3 Test SOP autonomous execution via cron trigger — BLOCKED: check_sop_cron_triggers exists but nothing calls it from the gateway main loop. Needs new patch to wire cron dispatch into gateway scheduler.
 - [x] 7.4 Add Pushover notification on SOP failure (task 5.1)
+- [ ] 7.5 Wire SOP cron dispatch into gateway — patch gateway/mod.rs to call check_sop_cron_triggers from the scheduler loop. Without this, SOPs only execute interactively (via sop_execute tool) not autonomously via cron.
+- [ ] 7.6 Fix Sid's Pushover tool — native pushover tool needs .env file at expected path. Credentials exist in systemd env but tool looks elsewhere.
