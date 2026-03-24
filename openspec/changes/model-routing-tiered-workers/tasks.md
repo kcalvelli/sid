@@ -27,7 +27,7 @@
 
 ## 5. Failure notification
 
-- [ ] 5.1 Add SOP failure Pushover notification: on run failure, send notification with SOP name, failed step, error message via existing Pushover MCP tool or direct integration
+- [x] 5.1 Add SOP failure Pushover notification: on run failure, send notification with SOP name, failed step, error message via existing Pushover MCP tool or direct integration
 
 ## 6. Validate and test
 
@@ -39,7 +39,7 @@
 
 ## 7. Follow-up TODOs
 
-- [ ] 7.1 Patch SwarmTool to use agentic agent loop (agent::run) instead of chat_with_system — enables workers to use ZeroClaw tools (shell, web_fetch, email, memory, etc.)
+- [x] 7.1 Patch SwarmTool to use agentic agent loop (agent::run) instead of chat_with_system — enables workers to use ZeroClaw tools (shell, web_fetch, email, memory, etc.)
 - [ ] 7.2 Fix dashboard Canvas WebSocket auth — live rendering fails because WebSocket upgrade doesn't pass bearer token correctly. REST API works, only live view is broken. Upstream dashboard limitation.
 - [ ] 7.3 Test SOP autonomous execution via cron trigger (wait for morning-briefing at 06:30 ET or manually trigger)
-- [ ] 7.4 Add Pushover notification on SOP failure (task 5.1)
+- [x] 7.4 Add Pushover notification on SOP failure (task 5.1)

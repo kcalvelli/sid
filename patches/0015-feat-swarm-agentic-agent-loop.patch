@@ -1,0 +1,132 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Keith Calvelli <keith@calvelli.dev>
+Date: Mon, 24 Mar 2026 12:00:00 -0400
+Subject: [PATCH] feat: SwarmTool uses agentic agent loop for agentic workers
+
+When a delegate agent has agentic=true, SwarmTool now uses the full
+agent loop (process_message) instead of bare chat_with_system. This
+gives workers access to the entire ZeroClaw tool registry (shell,
+web_fetch, email, memory, etc.) enabling genuine multi-step execution.
+
+---
+ src/tools/swarm.rs | 52 ++++++++++++++++++++++++++++++++++++++++++++--
+ 1 file changed, 50 insertions(+), 2 deletions(-)
+
+diff --git a/src/tools/swarm.rs b/src/tools/swarm.rs
+index 75f50ff..aabbccd 100644
+--- a/src/tools/swarm.rs
++++ b/src/tools/swarm.rs
+@@ -17,6 +17,7 @@ pub struct SwarmTool {
+     security: Arc<SecurityPolicy>,
+     fallback_credential: Option<String>,
+     provider_runtime_options: providers::ProviderRuntimeOptions,
++    config: Option<crate::config::Config>,
+ }
+
+ impl SwarmTool {
+@@ -33,6 +34,22 @@ impl SwarmTool {
+             security,
+             fallback_credential,
+             provider_runtime_options,
++            config: None,
++        }
++    }
++
++    /// Create a SwarmTool with a full Config for agentic worker support.
++    pub fn new_with_config(
++        swarms: HashMap<String, SwarmConfig>,
++        agents: HashMap<String, DelegateAgentConfig>,
++        fallback_credential: Option<String>,
++        security: Arc<SecurityPolicy>,
++        provider_runtime_options: providers::ProviderRuntimeOptions,
++        config: crate::config::Config,
++    ) -> Self {
++        Self {
++            swarms: Arc::new(swarms),
++            agents: Arc::new(agents),
++            security,
++            fallback_credential,
++            provider_runtime_options,
++            config: Some(config),
+         }
+     }
+
+@@ -67,8 +84,15 @@ impl SwarmTool {
+         prompt: &str,
+         timeout_secs: u64,
+     ) -> Result<String, String> {
+-        let provider = self
+-            .create_provider_for_agent(agent_config, agent_name)
++        // Agentic path: full agent loop with ZeroClaw tools.
++        if agent_config.agentic {
++            return self
++                .call_agent_agentic(agent_name, agent_config, prompt, timeout_secs)
++                .await;
++        }
++
++        // Non-agentic path: single LLM call.
++        let provider = self.create_provider_for_agent(agent_config, agent_name)
+             .map_err(|r| r.error.unwrap_or_default())?;
+
+         let temperature = agent_config.temperature.unwrap_or(0.7);
+@@ -99,6 +123,50 @@ impl SwarmTool {
+         }
+     }
+
++    /// Run an agentic worker through the full ZeroClaw agent loop, giving it
++    /// access to all configured tools (shell, memory, web_fetch, etc.).
++    async fn call_agent_agentic(
++        &self,
++        agent_name: &str,
++        agent_config: &DelegateAgentConfig,
++        prompt: &str,
++        timeout_secs: u64,
++    ) -> Result<String, String> {
++        let base_config = match &self.config {
++            Some(c) => c.clone(),
++            None => {
++                return Err(format!(
++                    "Agent '{agent_name}' is agentic but SwarmTool was created without config"
++                ));
++            }
++        };
++
++        // Build a worker config with the agent's provider/model.
++        let mut worker_config = base_config;
++        worker_config.default_provider = Some(agent_config.provider.clone());
++        worker_config.default_model = Some(agent_config.model.clone());
++        if let Some(ref key) = agent_config.api_key {
++            worker_config.api_key = Some(key.clone());
++        } else if worker_config.api_key.is_none() {
++            if let Some(ref fallback) = self.fallback_credential {
++                worker_config.api_key = Some(fallback.clone());
++            }
++        }
++
++        // Prepend the agent's system prompt as context.
++        let full_prompt = if let Some(ref sys) = agent_config.system_prompt {
++            format!("[System instructions]\n{sys}\n\n[Task]\n{prompt}")
++        } else {
++            prompt.to_string()
++        };
++
++        let result = tokio::time::timeout(
++            Duration::from_secs(timeout_secs),
++            crate::agent::process_message(worker_config, &full_prompt, None),
++        )
++        .await;
++
++        match result {
++            Ok(Ok(response)) if response.trim().is_empty() => Ok("[Empty response]".to_string()),
++            Ok(Ok(response)) => Ok(response),
++            Ok(Err(e)) => Err(format!("Agent '{agent_name}' agentic loop failed: {e}")),
++            Err(_) => Err(format!("Agent '{agent_name}' timed out after {timeout_secs}s")),
++        }
++    }
++
+     async fn execute_sequential(
+         &self,
+         swarm_config: &SwarmConfig,
+--
+2.53.0
+

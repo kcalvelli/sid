@@ -2,13 +2,13 @@ From 9126a87243b804ef48b233d10160efc2ebbae1fb Mon Sep 17 00:00:00 2001
 From: Keith Calvelli <keith@calvelli.dev>
 Date: Mon, 23 Mar 2026 16:07:35 -0400
 Subject: [PATCH] feat: add per-SOP provider/model override for headless
- execution
+ execution with failure notifications
 
 ---
- src/sop/dispatch.rs | 88 +++++++++++++++++++++++++++++++++++++++++++++
+ src/sop/dispatch.rs | 120 +++++++++++++++++++++++++++++++++++++++++++++
  src/sop/mod.rs      |  2 ++
  src/sop/types.rs    | 14 ++++++++
- 3 files changed, 104 insertions(+)
+ 3 files changed, 136 insertions(+)
 
 diff --git a/src/sop/dispatch.rs b/src/sop/dispatch.rs
 index 75f50ff..fa879eb 100644
@@ -18,6 +18,41 @@ index 75f50ff..fa879eb 100644
      all_results
  }
  
++// ── SOP failure notification via Pushover ────────────────────────────────
++
++/// Send a Pushover notification for SOP failure (fire-and-forget).
++fn notify_sop_failure(sop_name: &str, reason: &str) {
++    let user_key = match std::env::var("PUSHOVER_USER_KEY") {
++        Ok(k) if !k.is_empty() => k,
++        _ => return,
++    };
++    let api_token = match std::env::var("PUSHOVER_API_TOKEN") {
++        Ok(t) if !t.is_empty() => t,
++        _ => return,
++    };
++
++    let sop_name = sop_name.to_string();
++    let title = format!("SOP Failed: {sop_name}");
++    let message = reason.to_string();
++
++    tokio::spawn(async move {
++        let client = reqwest::Client::new();
++        if let Err(e) = client
++            .post("https://api.pushover.net/1/messages.json")
++            .form(&[
++                ("token", api_token.as_str()),
++                ("user", user_key.as_str()),
++                ("title", title.as_str()),
++                ("message", message.as_str()),
++            ])
++            .send()
++            .await
++        {
++            tracing::warn!("Failed to send Pushover notification for SOP '{sop_name}': {e}");
++        }
++    });
++}
++
 +// ── Autonomous SOP execution via provider override ──────────────────────
 +
 +/// Execute all steps of an SOP run autonomously using a dedicated provider.
@@ -36,10 +71,9 @@ index 75f50ff..fa879eb 100644
 +    let provider = match crate::providers::create_provider(&provider_name, None) {
 +        Ok(p) => p,
 +        Err(e) => {
-+            tracing::error!(
-+                "SOP '{}' run {run_id}: failed to create provider '{}': {e}",
-+                sop.name, provider_name,
-+            );
++            let reason = format!("Failed to create provider '{}': {e}", provider_name);
++            tracing::error!("SOP '{}' run {run_id}: {reason}", sop.name);
++            notify_sop_failure(&sop.name, &reason);
 +            return;
 +        }
 +    };
@@ -89,6 +123,7 @@ index 75f50ff..fa879eb 100644
 +            }
 +            Ok(super::types::SopRunAction::Failed { sop_name, reason, .. }) => {
 +                tracing::error!("SOP '{sop_name}' run {run_id} failed: {reason}");
++                notify_sop_failure(&sop_name, &reason);
 +                return;
 +            }
 +            Ok(other) => {
@@ -99,7 +134,9 @@ index 75f50ff..fa879eb 100644
 +                return;
 +            }
 +            Err(e) => {
-+                tracing::error!("SOP '{}' run {run_id} advance error: {e}", sop.name);
++                let reason = format!("Step advance error: {e}");
++                tracing::error!("SOP '{}' run {run_id}: {reason}", sop.name);
++                notify_sop_failure(&sop.name, &reason);
 +                return;
 +            }
 +        }
@@ -130,18 +167,14 @@ index 0c995e0..e625aa3 100644
      pub cooldown_secs: u64,
      #[serde(default = "default_max_concurrent")]
      pub max_concurrent: u32,
-+    #[serde(default)]
-+    pub provider: Option<String>,
-+    #[serde(default)]
-+    pub model: Option<String>,
-     #[serde(skip)]
-     pub location: Option<PathBuf>,
 +    /// Optional provider override for headless execution.
 +    #[serde(default)]
 +    pub provider: Option<String>,
 +    /// Optional model override (used with provider).
 +    #[serde(default)]
 +    pub model: Option<String>,
+     #[serde(skip)]
+     pub location: Option<PathBuf>,
  }
  
  fn default_cooldown_secs() -> u64 {

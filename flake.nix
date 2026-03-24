@@ -62,6 +62,7 @@
               ./patches/0012-fix-skip-permission-checks-in-Claude-Code-CLI.patch
               ./patches/0013-feat-add-swarm-gateway-endpoint.patch
               ./patches/0014-feat-sop-provider-override.patch
+              ./patches/0015-feat-swarm-agentic-agent-loop.patch
             ];
 
             postPatch = ''

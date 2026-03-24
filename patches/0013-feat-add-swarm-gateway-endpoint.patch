@@ -55,12 +55,13 @@ index 02dfcbe..d636a39 100644
 +        std::path::Path::new(&config.workspace_dir),
 +    );
 +
-+    let swarm_tool = crate::tools::SwarmTool::new(
++    let swarm_tool = crate::tools::SwarmTool::new_with_config(
 +        config.swarms.clone(),
 +        swarm_agents,
 +        fallback_credential,
 +        std::sync::Arc::new(security),
 +        crate::providers::ProviderRuntimeOptions::default(),
++        config.clone(),
 +    );
 +
 +    let args = serde_json::json!({"swarm": swarm_name, "prompt": prompt, "context": context});
