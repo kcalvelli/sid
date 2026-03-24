@@ -4,15 +4,15 @@ Date: Mon, 23 Mar 2026 16:11:42 -0400
 Subject: [PATCH] feat: add /api/swarm POST endpoint for MCP bridge
 
 ---
- src/gateway/api.rs | 54 ++++++++++++++++++++++++++++++++++++++++++++++
+ src/gateway/api.rs | 55 ++++++++++++++++++++++++++++++++++++++++++++++
  src/gateway/mod.rs |  2 ++
- 2 files changed, 56 insertions(+)
+ 2 files changed, 57 insertions(+)
 
 diff --git a/src/gateway/api.rs b/src/gateway/api.rs
 index 02dfcbe..d636a39 100644
 --- a/src/gateway/api.rs
 +++ b/src/gateway/api.rs
-@@ -2089,3 +2089,57 @@ mod tests {
+@@ -2089,3 +2089,58 @@ mod tests {
          assert!(crate::cron::list_jobs(&config).unwrap().is_empty());
      }
  }
@@ -84,6 +84,6 @@ index 270217d..e2e9143 100644
          // ── Pairing + Device management API ──
          .route("/api/pairing/initiate", post(api_pairing::initiate_pairing))
          .route("/api/pair", post(api_pairing::submit_pairing_enhanced))
--- 
+--
 2.53.0
 
