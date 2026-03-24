@@ -143,7 +143,7 @@ index 75f50ff..aabbccd 100644
              delegate_fallback_credential,
              security.clone(),
              provider_runtime_options,
-+            root_config.as_ref().clone(),
++            (*root_config).clone(),
          )));
      }
 
