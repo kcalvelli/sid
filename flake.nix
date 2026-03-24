@@ -63,6 +63,7 @@
               ./patches/0013-feat-add-swarm-gateway-endpoint.patch
               ./patches/0014-feat-sop-provider-override.patch
               ./patches/0015-feat-swarm-agentic-agent-loop.patch
+              ./patches/0016-fix-canvas-websocket-subprotocol-response.patch
             ];
 
             postPatch = ''
