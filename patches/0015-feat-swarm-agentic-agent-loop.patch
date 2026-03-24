@@ -8,6 +8,9 @@ agent loop (process_message) instead of bare chat_with_system. This
 gives workers access to the entire ZeroClaw tool registry (shell,
 web_fetch, email, memory, etc.) enabling genuine multi-step execution.
 
+Also patches the native tool registration in mod.rs to use
+new_with_config so the agentic path has the Config it needs.
+
 ---
  src/tools/mod.rs   |  3 +-
  src/tools/swarm.rs | 72 ++++++++++++++++++++++++++++++++++++++++++++++
@@ -143,6 +146,7 @@ index 75f50ff..aabbccd 100644
 +            root_config.as_ref().clone(),
          )));
      }
+
 --
 2.53.0
 
