@@ -1,6 +1,6 @@
-From 96dc5674ec6b02bee91a0fa5c1cb8ae27fe0836f Mon Sep 17 00:00:00 2001
+From f4744078b85881b212b84840391cc800f6ecd748 Mon Sep 17 00:00:00 2001
 From: Keith Calvelli <keith@calvelli.dev>
-Date: Wed, 25 Mar 2026 12:33:44 -0400
+Date: Wed, 25 Mar 2026 14:26:35 -0400
 Subject: [PATCH] fix: share CanvasStore between gateway and channels
 
 The daemon spawns the gateway and channels independently, each creating
@@ -8,20 +8,66 @@ their own CanvasStore. When an agent pushes to canvas via a channel
 (Telegram, dashboard chat), the frame is stored in the channel's orphan
 store, not the gateway's store that WebSocket subscribers watch.
 
+Additionally, Agent::from_config (used by the gateway WebSocket chat)
+creates its own orphaned CanvasStore per connection.
+
 Fix: create a single CanvasStore in the daemon and thread it through to
-both run_gateway and start_channels so they share the same broadcast.
+run_gateway, start_channels, and per-connection agents so they all share
+the same broadcast.
 ---
+ src/agent/agent.rs  |  8 ++++----
  src/channels/mod.rs |  4 ++--
  src/daemon/mod.rs   | 10 ++++++++--
  src/gateway/mod.rs  |  4 ++--
+ src/gateway/ws.rs   |  2 +-
  src/main.rs         | 10 +++++-----
- 4 files changed, 17 insertions(+), 11 deletions(-)
+ 6 files changed, 22 insertions(+), 16 deletions(-)
 
+diff --git a/src/agent/agent.rs b/src/agent/agent.rs
+index 22c600e..44bc0d4 100644
+--- a/src/agent/agent.rs
++++ b/src/agent/agent.rs
+@@ -348,7 +348,7 @@ impl Agent {
+         }
+     }
+ 
+-    pub async fn from_config(config: &Config) -> Result<Self> {
++    pub async fn from_config(config: &Config, canvas_store: Option<crate::tools::CanvasStore>) -> Result<Self> {
+         let observer: Arc<dyn Observer> =
+             Arc::from(observability::create_observer(&config.observability));
+         let runtime: Arc<dyn runtime::RuntimeAdapter> =
+@@ -392,7 +392,7 @@ impl Agent {
+                 &config.agents,
+                 config.api_key.as_deref(),
+                 config,
+-                None,
++                canvas_store,
+             );
+ 
+         // ── Wire MCP tools (non-fatal) ─────────────────────────────
+@@ -1138,7 +1138,7 @@ pub async fn run(
+     }
+     effective_config.default_temperature = temperature;
+ 
+-    let mut agent = Agent::from_config(&effective_config).await?;
++    let mut agent = Agent::from_config(&effective_config, None).await?;
+ 
+     let provider_name = effective_config
+         .default_provider
+@@ -1482,7 +1482,7 @@ mod tests {
+             .extra_headers
+             .insert("X-Title".to_string(), "zeroclaw-web".to_string());
+ 
+-        let mut agent = Agent::from_config(&config)
++        let mut agent = Agent::from_config(&config, None)
+             .await
+             .expect("agent from config");
+         let response = agent.turn("hello").await.expect("agent turn");
 diff --git a/src/channels/mod.rs b/src/channels/mod.rs
-index 953dcd4..45b0597 100644
+index 459541c..5251972 100644
 --- a/src/channels/mod.rs
 +++ b/src/channels/mod.rs
-@@ -4557,7 +4557,7 @@ pub async fn doctor_channels(config: Config) -> Result<()> {
+@@ -4572,7 +4572,7 @@ pub async fn doctor_channels(config: Config) -> Result<()> {
  
  /// Start all configured channels and route messages to the agent
  #[allow(clippy::too_many_lines)]
@@ -30,7 +76,7 @@ index 953dcd4..45b0597 100644
      let provider_name = resolved_default_provider(&config);
      let provider_runtime_options = providers::ProviderRuntimeOptions {
          auth_profile_override: None,
-@@ -4648,7 +4648,7 @@ pub async fn start_channels(config: Config) -> Result<()> {
+@@ -4663,7 +4663,7 @@ pub async fn start_channels(config: Config) -> Result<()> {
          &config.agents,
          config.api_key.as_deref(),
          &config,
@@ -40,7 +86,7 @@ index 953dcd4..45b0597 100644
  
      // Wire MCP tools into the registry before freezing — non-fatal.
 diff --git a/src/daemon/mod.rs b/src/daemon/mod.rs
-index 036e81b..c52d2c3 100644
+index 9384a61..23ebfc9 100644
 --- a/src/daemon/mod.rs
 +++ b/src/daemon/mod.rs
 @@ -62,9 +62,12 @@ pub async fn run(config: Config, host: String, port: u16) -> Result<()> {
@@ -84,10 +130,10 @@ index 036e81b..c52d2c3 100644
              ));
          } else {
 diff --git a/src/gateway/mod.rs b/src/gateway/mod.rs
-index aa43e36..ef27b47 100644
+index cd28cdb..0613a33 100644
 --- a/src/gateway/mod.rs
 +++ b/src/gateway/mod.rs
-@@ -366,7 +366,7 @@ pub struct AppState {
+@@ -369,7 +369,7 @@ pub struct AppState {
  
  /// Run the HTTP gateway using axum with proper HTTP/1.1 compliance.
  #[allow(clippy::too_many_lines)]
@@ -96,7 +142,7 @@ index aa43e36..ef27b47 100644
      // ── Security: refuse public bind without tunnel or explicit opt-in ──
      if is_public_bind(host) && config.tunnel.provider == "none" && !config.gateway.allow_public_bind
      {
-@@ -438,7 +438,7 @@ pub async fn run_gateway(host: &str, port: u16, config: Config) -> Result<()> {
+@@ -441,7 +441,7 @@ pub async fn run_gateway(host: &str, port: u16, config: Config) -> Result<()> {
          (None, None)
      };
  
@@ -105,6 +151,19 @@ index aa43e36..ef27b47 100644
  
      let (
          mut tools_registry_raw,
+diff --git a/src/gateway/ws.rs b/src/gateway/ws.rs
+index d35caac..c732248 100644
+--- a/src/gateway/ws.rs
++++ b/src/gateway/ws.rs
+@@ -166,7 +166,7 @@ async fn handle_socket(
+ 
+     // Build a persistent Agent for this connection so history is maintained across turns.
+     let config = state.config.lock().clone();
+-    let mut agent = match crate::agent::Agent::from_config(&config).await {
++    let mut agent = match crate::agent::Agent::from_config(&config, Some(state.canvas_store.clone())).await {
+         Ok(a) => a,
+         Err(e) => {
+             tracing::error!(error = %e, "Agent initialization failed");
 diff --git a/src/main.rs b/src/main.rs
 index a95f712..cb74796 100644
 --- a/src/main.rs
