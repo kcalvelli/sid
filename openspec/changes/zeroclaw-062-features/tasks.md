@@ -48,7 +48,7 @@
 
 ## 8. Tauri Desktop Evaluation
 
-- [ ] 8.1 Attempt to build upstream ZeroClaw `apps/tauri` with Nix toolchain
-- [ ] 8.2 Document build result, required dependencies, and any patches needed
-- [ ] 8.3 If build succeeds, compare against web canvas UI (native integration, performance, notifications, offline)
-- [ ] 8.4 Write go/no-go recommendation document
+- [x] 8.1 Attempt to build upstream ZeroClaw `apps/tauri` with Nix toolchain — no Tauri package in flake, no apps/tauri source directory, zero references in repo
+- [x] 8.2 Document build result, required dependencies, and any patches needed — N/A, Tauri not present in v0.6.2
+- [x] 8.3 If build succeeds, compare against web canvas UI — N/A
+- [x] 8.4 Write go/no-go recommendation document — NO-GO: Tauri not available in ZeroClaw v0.6.2, web canvas is the UI

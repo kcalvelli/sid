@@ -1,0 +1,3 @@
+[submodule "workspace"]
+	path = workspace
+	url = git@github.com:kcalvelli/sid-workspace.git
