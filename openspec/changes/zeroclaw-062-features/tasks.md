@@ -7,7 +7,7 @@
 ## 2. Media Pipeline
 
 - [x] 2.1 ~~Add `[media_pipeline] enabled = true`~~ Invalid key — real config is `[transcription] enabled = true` with provider (groq/openai/deepgram/assemblyai/google)
-- [ ] 2.2 Add `[transcription]` config to NixOS module with a provider API key, deploy, and test voice memo via Telegram
+- [x] 2.2 Add `[transcription]` config with Deepgram provider, deploy, test voice memo via Telegram — PASS (STT + TTS both working)
 - [ ] 2.3 Test image description by sending a photo via Telegram and confirming agent receives description
 
 ## 3. New Tools (llm-task, memory-purge, ask-user)
