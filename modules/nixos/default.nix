@@ -147,6 +147,12 @@ let
 
     ${xmppConfig}
 
+    [routines]
+    enabled = true
+
+    [media_pipeline]
+    enabled = true
+
     [web_fetch]
     enabled = true
     allowed_domains = ["*"]
@@ -154,8 +160,18 @@ let
     [secrets]
     encrypt = true
 
+    [tools.llm_task]
+    enabled = true
+
+    [tools.memory_purge]
+    enabled = true
+
+    [tools.ask_user]
+    enabled = true
+
     [identity]
     format = "openclaw"
+    source = "workspace"
 
     [agents.worker]
     provider = "anthropic"
