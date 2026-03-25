@@ -8,15 +8,15 @@
 
 - [x] 2.1 ~~Add `[media_pipeline] enabled = true`~~ Invalid key — real config is `[transcription] enabled = true` with provider (groq/openai/deepgram/assemblyai/google)
 - [x] 2.2 Add `[transcription]` config with Deepgram provider, deploy, test voice memo via Telegram — PASS (STT + TTS both working)
-- [ ] 2.3 Test image description by sending a photo via Telegram and confirming agent receives description
+- [x] 2.3 Test image description by sending a photo via Telegram — PASS
 
 ## 3. New Tools (llm-task, memory-purge, ask-user)
 
 - [x] 3.1 ~~Add tool registrations to config~~ Not needed — tools are compiled in and available natively (confirmed: 44 tools visible)
 - [x] 3.2 Verify tools appear in agent's available tool list — PASS (llm_task, memory_purge, ask_user all visible)
-- [ ] 3.3 Test `llm_task` with a structured JSON extraction prompt
-- [ ] 3.4 Test `memory_purge` by purging a test memory entry
-- [ ] 3.5 Test `ask_user` by triggering a prompt during a Telegram conversation
+- [x] 3.3 Test `llm_task` with a structured JSON extraction prompt — PASS
+- [x] 3.4 Test `memory_purge` by purging a test memory entry — PASS
+- [x] 3.5 Test `ask_user` by triggering a prompt during a Telegram conversation — PASS
 
 ## 4. Pushover Env Fix
 

@@ -64,6 +64,7 @@
               ./patches/0014-feat-sop-provider-override.patch
               ./patches/0015-feat-swarm-agentic-agent-loop.patch
               ./patches/0016-fix-canvas-websocket-subprotocol-response.patch
+              ./patches/0017-fix-canvas-store-shared-between-gateway-and-channels.patch
             ];
 
             postPatch = ''
