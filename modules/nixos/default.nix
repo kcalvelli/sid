@@ -147,12 +147,6 @@ let
 
     ${xmppConfig}
 
-    [routines]
-    enabled = true
-
-    [media_pipeline]
-    enabled = true
-
     [web_fetch]
     enabled = true
     allowed_domains = ["*"]
@@ -160,18 +154,8 @@ let
     [secrets]
     encrypt = true
 
-    [tools.llm_task]
-    enabled = true
-
-    [tools.memory_purge]
-    enabled = true
-
-    [tools.ask_user]
-    enabled = true
-
     [identity]
     format = "openclaw"
-    source = "workspace"
 
     [agents.worker]
     provider = "anthropic"
@@ -427,6 +411,18 @@ in
 
         chown sid:sid ${zeroclawDir}/config.toml
         chmod 0400 ${zeroclawDir}/config.toml
+
+        # Write workspace .env for tools that read credentials from it (e.g. pushover)
+        {
+          if [ -f "${pushoverUserKeyFile}" ]; then
+            echo "PUSHOVER_USER_KEY=$(cat ${pushoverUserKeyFile})"
+          fi
+          if [ -f "${pushoverApiTokenFile}" ]; then
+            echo "PUSHOVER_TOKEN=$(cat ${pushoverApiTokenFile})"
+          fi
+        } > ${zeroclawDir}/workspace/.env
+        chown sid:sid ${zeroclawDir}/workspace/.env
+        chmod 0400 ${zeroclawDir}/workspace/.env
 
         # Write environment file with API keys
         {
