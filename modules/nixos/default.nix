@@ -22,6 +22,7 @@ let
   pushoverUserKeyFile = "/run/agenix/sid-pushover-user-key";
   pushoverApiTokenFile = "/run/agenix/sid-pushover-api-token";
   elevenlabsApiTokenFile = "/run/agenix/sid-elevenlabs-api-token";
+  deepgramApiTokenFile = "/run/agenix/sid-deepgram-api-token";
 
   # Build telegram config section dynamically
   # ZeroClaw: presence of [channels_config.telegram] = enabled; absence = disabled
@@ -126,6 +127,13 @@ let
     model_id = "eleven_monolingual_v1"
     stability = 0.5
     similarity_boost = 0.5
+
+    [transcription]
+    enabled = true
+    default_provider = "deepgram"
+
+    [transcription.deepgram]
+    api_key = "DEEPGRAM_API_TOKEN_PLACEHOLDER"
 
     [autonomy]
     level = "full"
@@ -377,6 +385,11 @@ in
         if [ -f "${elevenlabsApiTokenFile}" ]; then
           ELEVENLABS_TOKEN="$(cat "${elevenlabsApiTokenFile}")"
           ${pkgs.gnused}/bin/sed -i "s|ELEVENLABS_API_TOKEN_PLACEHOLDER|$ELEVENLABS_TOKEN|g" ${zeroclawDir}/config.toml
+        fi
+
+        if [ -f "${deepgramApiTokenFile}" ]; then
+          DEEPGRAM_TOKEN="$(cat "${deepgramApiTokenFile}")"
+          ${pkgs.gnused}/bin/sed -i "s|DEEPGRAM_API_TOKEN_PLACEHOLDER|$DEEPGRAM_TOKEN|g" ${zeroclawDir}/config.toml
         fi
 
         if [ -f "${oauthTokenFile}" ]; then
@@ -708,6 +721,16 @@ in
     (lib.mkIf (cfg.enable && builtins.pathExists (secretsPath + /elevenlabs-api-token.age)) {
       age.secrets.sid-elevenlabs-api-token = {
         file = secretsPath + /elevenlabs-api-token.age;
+        owner = "sid";
+        group = "sid";
+        mode = "0400";
+      };
+    })
+
+    # ── Deepgram STT API token ───────────────────────────────────────
+    (lib.mkIf (cfg.enable && builtins.pathExists (secretsPath + /deepgram-api-token.age)) {
+      age.secrets.sid-deepgram-api-token = {
+        file = secretsPath + /deepgram-api-token.age;
         owner = "sid";
         group = "sid";
         mode = "0400";

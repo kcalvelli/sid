@@ -67,4 +67,10 @@ in
     keith
   ];
 
+  "deepgram-api-token.age".publicKeys = [
+    edge
+    mini
+    keith
+  ];
+
 }
