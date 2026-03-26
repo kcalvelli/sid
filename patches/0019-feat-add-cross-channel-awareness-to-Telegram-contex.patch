@@ -1,0 +1,32 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Keith Calvelli <keith@calvelli.dev>
+Date: Thu, 27 Mar 2026 00:00:00 -0400
+Subject: [PATCH 19/19] feat: add cross-channel awareness to Telegram context
+ prefix
+
+Sid on Telegram didn't know its own email channel was active because
+the context prefix only said "you are responding via Telegram" with no
+mention of other channels.  Expand the prefix so the LLM knows about
+all connected channels.
+---
+ src/channels/telegram.rs | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/src/channels/telegram.rs b/src/channels/telegram.rs
+index f07b657..c3a8b91 100644
+--- a/src/channels/telegram.rs
++++ b/src/channels/telegram.rs
+@@ -3,7 +3,9 @@ use super::traits::{Channel, ChannelMessage, SendMessage};
+ /// Context prefix prepended to every Telegram message before it reaches the LLM.
+ const TELEGRAM_STYLE_PREFIX: &str = "\
+ [context: you are responding via Telegram. \
+-Keep responses concise. Telegram supports markdown formatting.]\n";
++Keep responses concise. Telegram supports markdown formatting. \
++You also have email (genxbot@calvelli.us via IMAP IDLE) and XMPP channels active. \
++Your email channel receives mail instantly — you can reference recent emails if relevant.]\n";
+
+ use crate::config::{Config, StreamMode};
+ use crate::security::pairing::PairingGuard;
+--
+2.53.0
+

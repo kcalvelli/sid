@@ -64,6 +64,8 @@
               ./patches/0015-feat-swarm-agentic-agent-loop.patch
               ./patches/0016-fix-canvas-websocket-subprotocol-response.patch
               ./patches/0017-fix-canvas-store-shared-between-gateway-and-channels.patch
+              ./patches/0018-fix-skip-noreply-and-bounce-emails-to-prevent-error.patch
+              ./patches/0019-feat-add-cross-channel-awareness-to-Telegram-contex.patch
             ];
 
             postPatch = ''

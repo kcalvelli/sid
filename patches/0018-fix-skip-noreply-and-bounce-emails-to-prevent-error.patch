@@ -1,0 +1,45 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Keith Calvelli <keith@calvelli.dev>
+Date: Thu, 27 Mar 2026 00:00:00 -0400
+Subject: [PATCH 18/19] fix: skip noreply and bounce emails to prevent error
+ replies
+
+Sid replied to noreply@github.com and then tried to reply to the
+Mailer-Daemon bounce, causing a 550 error.  Filter out automated
+senders that should never receive replies.
+---
+ src/channels/email_channel.rs | 18 ++++++++++++++++++
+ 1 file changed, 18 insertions(+)
+
+diff --git a/src/channels/email_channel.rs b/src/channels/email_channel.rs
+index bac22b46..a1c2cf50 100644
+--- a/src/channels/email_channel.rs
++++ b/src/channels/email_channel.rs
+@@ -457,6 +457,24 @@ impl EmailChannel {
+                 continue;
+             }
+
++            // Skip emails from noreply/no-reply addresses and bounce daemons
++            {
++                let sender_lower = email.sender.to_ascii_lowercase();
++                let dominated = sender_lower.split('@').next().unwrap_or("");
++                if dominated == "noreply"
++                    || dominated == "no-reply"
++                    || dominated == "donotreply"
++                    || dominated == "do-not-reply"
++                    || dominated == "do_not_reply"
++                    || dominated == "mailer-daemon"
++                    || dominated == "postmaster"
++                    || dominated.starts_with("bounce")
++                {
++                    info!("Ignoring automated email from {}", email.sender);
++                    continue;
++                }
++            }
++
+             let is_new = {
+                 let mut seen = self.seen_messages.lock().await;
+                 seen.insert(email.msg_id.clone())
+--
+2.53.0
+

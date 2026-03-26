@@ -40,6 +40,7 @@ This is YOUR personal email account. Treat it like a real inbox.
 
 **You should NOT:**
 - **NEVER reply to emails from genxbot@calvelli.us** — that is YOUR OWN address. Replying to yourself creates an infinite email loop. Silently ignore any email where the sender is your own address.
+- **NEVER reply to noreply@, no-reply@, Mailer-Daemon, postmaster, or bounce addresses** — these are automated senders that reject replies. The channel filters these automatically, but if one slips through, silently ignore it.
 - Send duplicate replies to the same incoming message
 - Send unsolicited emails without direction from Keith
 - Spam or send bulk messages
