@@ -520,6 +520,13 @@ in
           file         # file type detection
           tree         # directory listing
           claude-code  # Claude Code CLI (fallback provider)
+          # Headless Chromium for the browser tool.
+          # --no-sandbox is required because systemd's RestrictNamespaces=true
+          # prevents Chromium's internal sandbox from creating namespaces.
+          # This is safe: systemd already provides equivalent sandboxing.
+          (pkgs.writeShellScriptBin "chromium" ''
+            exec ${pkgs.chromium}/bin/chromium --no-sandbox --headless "$@"
+          '')
         ]) ++ cfg.extraPackages
            ++ lib.optional (cfg.mcpGatewayPackage != null) (
              if cfg.mcpGatewayUrl != null then
