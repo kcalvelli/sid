@@ -66,6 +66,7 @@
               ./patches/0017-fix-canvas-store-shared-between-gateway-and-channels.patch
               ./patches/0018-fix-skip-noreply-and-bounce-emails-to-prevent-error.patch
               ./patches/0019-feat-add-cross-channel-awareness-to-Telegram-contex.patch
+              ./patches/0020-fix-strip-anthropic-prefix-from-model-id-in-API-cal.patch
             ];
 
             postPatch = ''
