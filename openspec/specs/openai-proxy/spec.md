@@ -41,3 +41,7 @@ Returns complete `ChatCompletion` JSON object with the agent's response in `choi
 
 - Agent loop error → 500 with OpenAI error format
 - Invalid JSON request → 400 with OpenAI error format
+
+### Upstream Evaluation (v0.6.3)
+
+The custom OpenAI proxy patches (0005, 0006) and `openai_proxy.rs` replacement file SHALL be evaluated against upstream's "parse proxy tool events from SSE stream" feature on each ZeroClaw upgrade. The custom implementation is retained only if upstream lacks: identity injection from IDENTITY.md, `/v1/models` endpoint, single-burst SSE streaming compatible with Home Assistant, or 1MB body limit.
