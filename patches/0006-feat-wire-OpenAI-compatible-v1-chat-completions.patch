@@ -1,28 +1,19 @@
-From 9f8b208c11edd28da4a51294490fc4b5ec808bea Mon Sep 17 00:00:00 2001
-From: Keith Calvelli <keith@calvelli.dev>
-Date: Mon, 16 Mar 2026 15:18:04 -0400
-Subject: [PATCH 06/10] feat: wire OpenAI-compatible /v1/chat/completions
-
----
- src/gateway/mod.rs | 6 ++++++
- 1 file changed, 6 insertions(+)
-
 diff --git a/src/gateway/mod.rs b/src/gateway/mod.rs
-index 755bcd6..a79f261 100644
+index 169372f..778139e 100644
 --- a/src/gateway/mod.rs
 +++ b/src/gateway/mod.rs
-@@ -15,6 +15,7 @@ pub mod nodes;
- pub mod sse;
+@@ -19,6 +19,7 @@ pub mod sse;
  pub mod static_files;
+ pub mod tls;
  pub mod ws;
 +pub mod openai_proxy;
-
+ 
  use chrono::Local;
-
-@@ -751,6 +752,10 @@ pub async fn run_gateway(host: &str, port: u16, config: Config) -> Result<()> {
-         pending_pairings,
+ 
+@@ -874,6 +875,10 @@ pub async fn run_gateway(host: &str, port: u16, config: Config) -> Result<()> {
+         },
      };
-
+ 
 +    let chat_completions_router = Router::new()
 +        .route("/v1/chat/completions", post(openai_proxy::handle_chat_completions))
 +        .layer(RequestBodyLimitLayer::new(1_048_576));
@@ -30,7 +21,7 @@ index 755bcd6..a79f261 100644
      // Config PUT needs larger body limit (1MB)
      let config_put_router = Router::new()
          .route("/api/config", put(api::handle_api_config_put))
-@@ -929,6 +934,7 @@ pub async fn run_gateway(host: &str, port: u16, config: Config) -> Result<()> {
+@@ -1002,6 +1007,7 @@ pub async fn run_gateway(host: &str, port: u16, config: Config) -> Result<()> {
          .route("/_app/{*path}", get(static_files::handle_static))
          // ── Config PUT with larger body limit ──
          .merge(config_put_router)
@@ -38,6 +29,3 @@ index 755bcd6..a79f261 100644
          // ── SPA fallback: non-API GET requests serve index.html ──
          .fallback(get(static_files::handle_spa_fallback))
          .with_state(state)
---
-2.53.0
-

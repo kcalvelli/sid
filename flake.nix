@@ -4,7 +4,7 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     zeroclaw = {
-      url = "github:zeroclaw-labs/zeroclaw/v0.6.2";
+      url = "github:zeroclaw-labs/zeroclaw/v0.6.3";
       flake = false;  # source-only — we build it ourselves
     };
     agenix = {
@@ -26,10 +26,10 @@
 
           zeroclaw-web = pkgs.buildNpmPackage {
             pname = "zeroclaw-web";
-            version = "0.6.2";
+            version = "0.6.3";
             src = zeroclaw;
             sourceRoot = "source/web";
-            npmDepsHash = "sha256-4+raDJ7+w+RpdeZs2PJL10IWzfoT5B3EpOxsLUnlrRc=";
+            npmDepsHash = "sha256-RMiFoPj4cbUYONURsCp4FrNuy9bR1eRWqgAnACrVXsI=";
             installPhase = ''
               runHook preInstall
               cp -r dist $out
@@ -40,12 +40,11 @@
         {
           zeroclaw = pkgs.rustPlatform.buildRustPackage {
             pname = "zeroclaw";
-            version = "0.6.2";
+            version = "0.6.3";
             src = zeroclaw;
 
-            cargoHash = "sha256-2v4bIDgW73RnvkZ1ZP50W09kuyVTLlVPLDEI4BLGdZg=";
+            cargoHash = "sha256-YZ+VKHG3k+GxbhMcuXGDca+qmrprNG4lDcR64ysGhRg=";
 
-            buildFeatures = [ "memory-postgres" ];
 
             patches = [
               ./patches/0001-fix-add-missing-futures-and-async-stream-crate-depen.patch

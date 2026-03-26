@@ -1,28 +1,19 @@
-From c904e1459cdf6f56fd51382431f645e18ef0b352 Mon Sep 17 00:00:00 2001
-From: Keith Calvelli <keith@calvelli.dev>
-Date: Mon, 16 Mar 2026 15:18:04 -0400
-Subject: [PATCH 02/10] feat: prepend ISO-8601 timestamps to all incoming
- messages
- messages
-
-
 diff --git a/src/channels/mod.rs b/src/channels/mod.rs
-index 9a707e0..f15a879 100644
+index b7712b7..dae541a 100644
 --- a/src/channels/mod.rs
 +++ b/src/channels/mod.rs
 @@ -14,6 +14,8 @@
  //! To add a new channel, implement [`Channel`] in a new submodule and wire it into
  //! [`start_channels`]. See `AGENTS.md` §7.2 for the full change playbook.
-
+ 
 +use chrono::TimeZone;
 +
+ pub mod acp_server;
  pub mod bluesky;
  pub mod clawdtalk;
- pub mod cli;
-@@ -2144,7 +2146,11 @@ async fn process_channel_message(
-             .is_some_and(|turns| !turns.is_empty())
+@@ -2432,7 +2434,11 @@ async fn process_channel_message(
      };
-
+ 
      // Preserve user turn before the LLM call so interrupted requests keep context.
 -    append_sender_turn(ctx.as_ref(), &history_key, ChatMessage::user(&msg.content));
 +    let _ts = chrono::Local.timestamp_opt(msg.timestamp as i64, 0)
@@ -30,11 +21,11 @@ index 9a707e0..f15a879 100644
 +        .unwrap_or_else(chrono::Local::now);
 +    let _stamped_content = format!("[{}] {}", _ts.format("%Y-%m-%dT%H:%M:%S%:z"), msg.content);
 +    append_sender_turn(ctx.as_ref(), &history_key, ChatMessage::user(&_stamped_content));
-
+ 
      // Build history from per-sender conversation cache.
      let prior_turns_raw = if force_fresh_session {
 diff --git a/src/daemon/mod.rs b/src/daemon/mod.rs
-index 9bd4e34..1b52eeb 100644
+index 036e81b..9384a61 100644
 --- a/src/daemon/mod.rs
 +++ b/src/daemon/mod.rs
 @@ -1,6 +1,6 @@
@@ -45,7 +36,7 @@ index 9bd4e34..1b52eeb 100644
  use std::future::Future;
  use std::path::PathBuf;
  use tokio::task::JoinHandle;
-@@ -374,7 +374,7 @@ async fn run_heartbeat_worker(config: Config) -> Result<()> {
+@@ -373,7 +373,7 @@ async fn run_heartbeat_worker(config: Config) -> Result<()> {
          let mut tick_had_error = false;
          for task in &tasks_to_run {
              let task_start = std::time::Instant::now();
@@ -55,28 +46,25 @@ index 9bd4e34..1b52eeb 100644
                  Some(ctx) => format!("{ctx}\n\n{task_prompt}"),
                  None => task_prompt,
 diff --git a/src/gateway/mod.rs b/src/gateway/mod.rs
-index 63c3733..755bcd6 100644
+index dc476ec..df29825 100644
 --- a/src/gateway/mod.rs
 +++ b/src/gateway/mod.rs
-@@ -16,6 +16,8 @@ pub mod sse;
- pub mod static_files;
+@@ -20,6 +20,8 @@ pub mod static_files;
+ pub mod tls;
  pub mod ws;
-
+ 
 +use chrono::Local;
 +
  use crate::channels::{
-     session_backend::SessionBackend, session_sqlite::SqliteSessionBackend, Channel, LinqChannel,
-     NextcloudTalkChannel, SendMessage, WatiChannel, WhatsAppChannel,
-@@ -988,7 +990,8 @@ async fn run_gateway_chat_simple(state: &AppState, message: &str) -> anyhow::Res
-
+     session_backend::SessionBackend, session_sqlite::SqliteSessionBackend, Channel,
+     GmailPushChannel, LinqChannel, NextcloudTalkChannel, SendMessage, WatiChannel, WhatsAppChannel,
+@@ -1250,7 +1252,8 @@ async fn persist_pairing_tokens(config: Arc<Mutex<Config>>, pairing: &PairingGua
+ 
  /// Simple chat for webhook endpoint (no tools, for backward compatibility and testing).
  async fn run_gateway_chat_simple(state: &AppState, message: &str) -> anyhow::Result<String> {
 -    let user_messages = vec![ChatMessage::user(message)];
 +    let _stamped = format!("[{}] {}", chrono::Local::now().format("%Y-%m-%dT%H:%M:%S%:z"), message);
 +    let user_messages = vec![ChatMessage::user(&_stamped)];
-
+ 
      // Keep webhook/gateway prompts aligned with channel behavior by injecting
      // workspace-aware system context before model invocation.
---
-2.53.0
-

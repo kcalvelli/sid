@@ -1,33 +1,8 @@
-From f4744078b85881b212b84840391cc800f6ecd748 Mon Sep 17 00:00:00 2001
-From: Keith Calvelli <keith@calvelli.dev>
-Date: Wed, 25 Mar 2026 14:26:35 -0400
-Subject: [PATCH] fix: share CanvasStore between gateway and channels
-
-The daemon spawns the gateway and channels independently, each creating
-their own CanvasStore. When an agent pushes to canvas via a channel
-(Telegram, dashboard chat), the frame is stored in the channel's orphan
-store, not the gateway's store that WebSocket subscribers watch.
-
-Additionally, Agent::from_config (used by the gateway WebSocket chat)
-creates its own orphaned CanvasStore per connection.
-
-Fix: create a single CanvasStore in the daemon and thread it through to
-run_gateway, start_channels, and per-connection agents so they all share
-the same broadcast.
----
- src/agent/agent.rs  |  8 ++++----
- src/channels/mod.rs |  4 ++--
- src/daemon/mod.rs   | 10 ++++++++--
- src/gateway/mod.rs  |  4 ++--
- src/gateway/ws.rs   |  2 +-
- src/main.rs         | 10 +++++-----
- 6 files changed, 22 insertions(+), 16 deletions(-)
-
 diff --git a/src/agent/agent.rs b/src/agent/agent.rs
-index 22c600e..44bc0d4 100644
+index e16c014..a5dc539 100644
 --- a/src/agent/agent.rs
 +++ b/src/agent/agent.rs
-@@ -348,7 +348,7 @@ impl Agent {
+@@ -350,7 +350,7 @@ impl Agent {
          }
      }
  
@@ -36,16 +11,16 @@ index 22c600e..44bc0d4 100644
          let observer: Arc<dyn Observer> =
              Arc::from(observability::create_observer(&config.observability));
          let runtime: Arc<dyn runtime::RuntimeAdapter> =
-@@ -392,7 +392,7 @@ impl Agent {
-                 &config.agents,
-                 config.api_key.as_deref(),
-                 config,
--                None,
-+                canvas_store,
-             );
+@@ -400,7 +400,7 @@ impl Agent {
+             &config.agents,
+             config.api_key.as_deref(),
+             config,
+-            None,
++            canvas_store,
+         );
  
          // ── Wire MCP tools (non-fatal) ─────────────────────────────
-@@ -1138,7 +1138,7 @@ pub async fn run(
+@@ -1193,7 +1193,7 @@ pub async fn run(
      }
      effective_config.default_temperature = temperature;
  
@@ -54,7 +29,7 @@ index 22c600e..44bc0d4 100644
  
      let provider_name = effective_config
          .default_provider
-@@ -1482,7 +1482,7 @@ mod tests {
+@@ -1537,7 +1537,7 @@ mod tests {
              .extra_headers
              .insert("X-Title".to_string(), "zeroclaw-web".to_string());
  
@@ -63,11 +38,24 @@ index 22c600e..44bc0d4 100644
              .await
              .expect("agent from config");
          let response = agent.turn("hello").await.expect("agent turn");
+diff --git a/src/channels/acp_server.rs b/src/channels/acp_server.rs
+index 01f5bac..7a46705 100644
+--- a/src/channels/acp_server.rs
++++ b/src/channels/acp_server.rs
+@@ -263,7 +263,7 @@ impl AcpServer {
+         let session_id = Uuid::new_v4().to_string();
+ 
+         // Build agent from global config
+-        let agent = Agent::from_config(&self.config)
++        let agent = Agent::from_config(&self.config, None)
+             .await
+             .map_err(|e| RpcError {
+                 code: INTERNAL_ERROR,
 diff --git a/src/channels/mod.rs b/src/channels/mod.rs
-index 459541c..5251972 100644
+index 1176c3b..2675812 100644
 --- a/src/channels/mod.rs
 +++ b/src/channels/mod.rs
-@@ -4572,7 +4572,7 @@ pub async fn doctor_channels(config: Config) -> Result<()> {
+@@ -4660,7 +4660,7 @@ pub async fn doctor_channels(config: Config) -> Result<()> {
  
  /// Start all configured channels and route messages to the agent
  #[allow(clippy::too_many_lines)]
@@ -76,7 +64,7 @@ index 459541c..5251972 100644
      let provider_name = resolved_default_provider(&config);
      let provider_runtime_options = providers::ProviderRuntimeOptions {
          auth_profile_override: None,
-@@ -4663,7 +4663,7 @@ pub async fn start_channels(config: Config) -> Result<()> {
+@@ -4753,7 +4753,7 @@ pub async fn start_channels(config: Config) -> Result<()> {
          &config.agents,
          config.api_key.as_deref(),
          &config,
@@ -130,10 +118,10 @@ index 9384a61..23ebfc9 100644
              ));
          } else {
 diff --git a/src/gateway/mod.rs b/src/gateway/mod.rs
-index cd28cdb..0613a33 100644
+index 3b480e0..76035f4 100644
 --- a/src/gateway/mod.rs
 +++ b/src/gateway/mod.rs
-@@ -369,7 +369,7 @@ pub struct AppState {
+@@ -375,7 +375,7 @@ pub struct AppState {
  
  /// Run the HTTP gateway using axum with proper HTTP/1.1 compliance.
  #[allow(clippy::too_many_lines)]
@@ -142,7 +130,7 @@ index cd28cdb..0613a33 100644
      // ── Security: refuse public bind without tunnel or explicit opt-in ──
      if is_public_bind(host) && config.tunnel.provider == "none" && !config.gateway.allow_public_bind
      {
-@@ -441,7 +441,7 @@ pub async fn run_gateway(host: &str, port: u16, config: Config) -> Result<()> {
+@@ -448,7 +448,7 @@ pub async fn run_gateway(host: &str, port: u16, config: Config) -> Result<()> {
          (None, None)
      };
  
@@ -152,7 +140,7 @@ index cd28cdb..0613a33 100644
      let (
          mut tools_registry_raw,
 diff --git a/src/gateway/ws.rs b/src/gateway/ws.rs
-index d35caac..c732248 100644
+index 2ac63d2..9c53ce0 100644
 --- a/src/gateway/ws.rs
 +++ b/src/gateway/ws.rs
 @@ -166,7 +166,7 @@ async fn handle_socket(
@@ -165,10 +153,10 @@ index d35caac..c732248 100644
          Err(e) => {
              tracing::error!(error = %e, "Agent initialization failed");
 diff --git a/src/main.rs b/src/main.rs
-index a95f712..cb74796 100644
+index d270202..76487a4 100644
 --- a/src/main.rs
 +++ b/src/main.rs
-@@ -935,7 +935,7 @@ async fn main() -> Result<()> {
+@@ -980,7 +980,7 @@ async fn main() -> Result<()> {
  
          // Auto-start channels if user said yes during wizard
          if std::env::var("ZEROCLAW_AUTOSTART_CHANNELS").as_deref() == Ok("1") {
@@ -177,7 +165,7 @@ index a95f712..cb74796 100644
          }
          return Ok(());
      }
-@@ -1022,7 +1022,7 @@ async fn main() -> Result<()> {
+@@ -1082,7 +1082,7 @@ async fn main() -> Result<()> {
                      }
  
                      log_gateway_start(&host, port);
@@ -186,7 +174,7 @@ index a95f712..cb74796 100644
                  }
                  Some(zeroclaw::GatewayCommands::GetPaircode { new }) => {
                      let port = config.gateway.port;
-@@ -1071,13 +1071,13 @@ async fn main() -> Result<()> {
+@@ -1131,13 +1131,13 @@ async fn main() -> Result<()> {
                  Some(zeroclaw::GatewayCommands::Start { port, host }) => {
                      let (port, host) = resolve_gateway_addr(&config, port, host);
                      log_gateway_start(&host, port);
@@ -202,7 +190,7 @@ index a95f712..cb74796 100644
                  }
              }
          }
-@@ -1310,7 +1310,7 @@ async fn main() -> Result<()> {
+@@ -1370,7 +1370,7 @@ async fn main() -> Result<()> {
          },
  
          Commands::Channel { channel_command } => match channel_command {
@@ -211,6 +199,3 @@ index a95f712..cb74796 100644
              ChannelCommands::Doctor => Box::pin(channels::doctor_channels(config)).await,
              other => Box::pin(channels::handle_command(other, &config)).await,
          },
--- 
-2.53.0
-

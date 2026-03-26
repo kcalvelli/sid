@@ -77,6 +77,7 @@ let
     [memory]
     backend = "sqlite"
     auto_save = true
+    search_mode = "bm25"
     response_cache_enabled = true
     response_cache_ttl_minutes = 60
 
@@ -165,10 +166,21 @@ let
     [identity]
     format = "openclaw"
 
+    [[model_routes]]
+    hint = "cost-optimized"
+    provider = "anthropic"
+    model = "claude-haiku-4-5"
+
+    [[model_routes]]
+    hint = "reasoning"
+    provider = "anthropic"
+    model = "claude-opus-4-6"
+
     [agents.worker]
     provider = "anthropic"
     model = "claude-haiku-4-5"
     api_key = "ANTHROPIC_API_KEY_PLACEHOLDER"
+    max_tokens = 2048
     agentic = true
     temperature = 0.3
     timeout_secs = 120
@@ -178,6 +190,7 @@ let
     provider = "anthropic"
     model = "claude-sonnet-4-6"
     api_key = "ANTHROPIC_API_KEY_PLACEHOLDER"
+    max_tokens = 8192
     agentic = true
     temperature = 0.5
     timeout_secs = 180

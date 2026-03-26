@@ -1,20 +1,11 @@
-From dd478acf8ddb1c07967e99115cc2e69492531379 Mon Sep 17 00:00:00 2001
-From: Keith Calvelli <keith@calvelli.dev>
-Date: Mon, 16 Mar 2026 15:18:38 -0400
-Subject: [PATCH 08/10] feat: preserve email subject in reply threading
-
----
- src/channels/email_channel.rs | 20 ++++++++++++++++++--
- 1 file changed, 18 insertions(+), 2 deletions(-)
-
 diff --git a/src/channels/email_channel.rs b/src/channels/email_channel.rs
-index bac22b46..8cd0c36a 100644
+index cd582de..71501c1 100644
 --- a/src/channels/email_channel.rs
 +++ b/src/channels/email_channel.rs
-@@ -460,6 +460,13 @@ impl EmailChannel {
+@@ -470,6 +470,13 @@ impl EmailChannel {
                  continue;
              }
-
+ 
 +            // Extract subject for reply threading
 +            let _email_subj = if email.content.starts_with("Subject: ") {
 +                email.content.lines().next()
@@ -25,18 +16,18 @@ index bac22b46..8cd0c36a 100644
              let msg = ChannelMessage {
                  id: email.msg_id,
                  reply_target: email.sender.clone(),
-@@ -467,7 +474,7 @@ impl EmailChannel {
+@@ -477,7 +484,7 @@ impl EmailChannel {
                  content: email.content,
                  channel: "email".to_string(),
                  timestamp: email.timestamp,
 -                thread_ts: None,
 +                thread_ts: _email_subj,
                  interruption_scope_id: None,
+                 attachments: vec![],
              };
-
-@@ -521,8 +528,10 @@ impl Channel for EmailChannel {
+@@ -531,8 +538,10 @@ impl Channel for EmailChannel {
      }
-
+ 
      async fn send(&self, message: &SendMessage) -> Result<()> {
 -        // Use explicit subject if provided, otherwise fall back to legacy parsing or default
 +        // Use explicit subject if provided, otherwise fall back to legacy parsing,
@@ -46,7 +37,7 @@ index bac22b46..8cd0c36a 100644
          let (subject, body) = if let Some(ref subj) = message.subject {
              (subj.as_str(), message.content.as_str())
          } else if message.content.starts_with("Subject: ") {
-@@ -531,6 +540,13 @@ impl Channel for EmailChannel {
+@@ -541,6 +550,13 @@ impl Channel for EmailChannel {
              } else {
                  (default_subject, message.content.as_str())
              }
@@ -60,6 +51,3 @@ index bac22b46..8cd0c36a 100644
          } else {
              (default_subject, message.content.as_str())
          };
---
-2.53.0
-

@@ -1,16 +1,8 @@
-From 2f50380424006a6e59291807841870dac8216d84 Mon Sep 17 00:00:00 2001
-From: Keith Calvelli <keith@calvelli.dev>
-Date: Mon, 16 Mar 2026 15:18:04 -0400
-Subject: [PATCH 03/10] feat: wire XMPP channel into channel registry and
- config schema
- schema
-
-
 diff --git a/.gitignore b/.gitignore
-index f20d7e3..af31343 100644
+index 143225f..91c0369 100644
 --- a/.gitignore
 +++ b/.gitignore
-@@ -48,4 +48,4 @@ lcov.info
+@@ -51,4 +51,4 @@ lcov.info
  .idea
  
  # Wrangler cache
@@ -19,10 +11,10 @@ index f20d7e3..af31343 100644
 +.wrangler/.direnv/
 \ No newline at end of file
 diff --git a/src/channels/mod.rs b/src/channels/mod.rs
-index f15a879..8f07a64 100644
+index b7712b7..28d3ee9 100644
 --- a/src/channels/mod.rs
 +++ b/src/channels/mod.rs
-@@ -55,6 +55,7 @@ pub mod whatsapp;
+@@ -61,6 +61,7 @@ pub mod whatsapp;
  pub mod whatsapp_storage;
  #[cfg(feature = "whatsapp-web")]
  pub mod whatsapp_web;
@@ -30,15 +22,15 @@ index f15a879..8f07a64 100644
  
  pub use bluesky::BlueskyChannel;
  pub use clawdtalk::{ClawdTalkChannel, ClawdTalkConfig};
-@@ -90,6 +91,7 @@ pub use wecom::WeComChannel;
+@@ -102,6 +103,7 @@ pub use wecom::WeComChannel;
  pub use whatsapp::WhatsAppChannel;
  #[cfg(feature = "whatsapp-web")]
  pub use whatsapp_web::WhatsAppWebChannel;
 +pub use xmpp::XmppChannel;
  
- use crate::agent::loop_::{build_tool_instructions, run_tool_call_loop, scrub_credentials};
- use crate::approval::ApprovalManager;
-@@ -3670,6 +3672,13 @@ fn collect_configured_channels(
+ use crate::agent::loop_::{
+     build_tool_instructions, clear_model_switch_request, get_model_switch_state,
+@@ -4580,6 +4582,13 @@ fn collect_configured_channels(
          });
      }
  
@@ -53,34 +45,34 @@ index f15a879..8f07a64 100644
  }
  
 diff --git a/src/config/schema.rs b/src/config/schema.rs
-index dc9b2ae..c777abf 100644
+index 0635030..c3ec75f 100644
 --- a/src/config/schema.rs
 +++ b/src/config/schema.rs
-@@ -5167,6 +5167,8 @@ pub struct ChannelsConfig {
+@@ -6090,6 +6090,8 @@ pub struct ChannelsConfig {
      pub reddit: Option<RedditConfig>,
      /// Bluesky channel configuration (AT Protocol).
      pub bluesky: Option<BlueskyConfig>,
 +    /// XMPP channel configuration.
 +    pub xmpp: Option<crate::channels::xmpp::XmppConfig>,
+     /// Voice call channel configuration (Twilio/Telnyx/Plivo).
+     pub voice_call: Option<crate::channels::voice_call::VoiceCallConfig>,
      /// Voice wake word detection channel configuration.
-     #[cfg(feature = "voice-wake")]
-     pub voice_wake: Option<VoiceWakeConfig>,
-@@ -5355,6 +5357,7 @@ impl Default for ChannelsConfig {
+@@ -6280,6 +6282,7 @@ impl Default for ChannelsConfig {
              clawdtalk: None,
              reddit: None,
              bluesky: None,
 +            xmpp: None,
+             voice_call: None,
              #[cfg(feature = "voice-wake")]
              voice_wake: None,
-             message_timeout_secs: default_channel_message_timeout_secs(),
 diff --git a/src/tools/mod.rs b/src/tools/mod.rs
-index 7c5ae54..95d9ece 100644
+index ce49fe7..b3f6636 100644
 --- a/src/tools/mod.rs
 +++ b/src/tools/mod.rs
-@@ -875,6 +875,11 @@ pub fn all_tools_with_runtime(
-         }
+@@ -1045,6 +1045,11 @@ pub fn all_tools_with_runtime(
+         )));
      }
-
+ 
 +    // XMPP tools (conditionally registered when XMPP channel is configured)
 +    if root_config.channels_config.xmpp.is_some() {
 +        tool_arcs.extend(crate::channels::xmpp::xmpp_tools());
@@ -89,10 +81,3 @@ index 7c5ae54..95d9ece 100644
      (
          boxed_registry_from_arcs(tool_arcs),
          delegate_handle,
-         Some(reaction_handle),
-     )
- }
- 
--- 
-2.53.0
-
