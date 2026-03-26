@@ -166,6 +166,9 @@ let
     [identity]
     format = "openclaw"
 
+    [project_intel]
+    enabled = true
+
     [[model_routes]]
     hint = "cost-optimized"
     provider = "anthropic"
