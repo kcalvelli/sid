@@ -31,7 +31,7 @@
             version = "0.6.5";
             src = zeroclaw;
             sourceRoot = "source/web";
-            npmDepsHash = "";
+            npmDepsHash = "sha256-RMiFoPj4cbUYONURsCp4FrNuy9bR1eRWqgAnACrVXsI=";
             postPatch = ''
               # PWA: inject manifest, service worker, icons, and registration module
               cp ${pwaOverlay}/manifest.json public/manifest.json
