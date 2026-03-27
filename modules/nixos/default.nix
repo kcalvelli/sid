@@ -88,7 +88,7 @@ let
     [gateway]
     host = "0.0.0.0"
     port = ${toString cfg.port}
-    require_pairing = true
+    require_pairing = false
     allow_public_bind = true
     paired_tokens = ["GATEWAY_TOKEN_PLACEHOLDER"]
 
