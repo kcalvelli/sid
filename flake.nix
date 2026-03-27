@@ -152,6 +152,15 @@
             '';
 
             postInstall = ''
+              # Install icons into hicolor theme
+              for size in 32 128; do
+                mkdir -p $out/share/icons/hicolor/''${size}x''${size}/apps
+                cp apps/tauri/icons/''${size}x''${size}.png \
+                  $out/share/icons/hicolor/''${size}x''${size}/apps/zeroclaw.png
+              done
+              mkdir -p $out/share/icons/hicolor/scalable/apps
+              cp apps/tauri/icons/icon.svg $out/share/icons/hicolor/scalable/apps/zeroclaw.svg
+
               # XDG autostart desktop file
               mkdir -p $out/share/applications $out/etc/xdg/autostart
               cat > $out/share/applications/zeroclaw-desktop.desktop <<EOF
