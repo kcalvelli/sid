@@ -1,6 +1,12 @@
---- a/apps/tauri/tauri.conf.json	2026-03-27 09:38:44.207499515 -0400
-+++ b/apps/tauri/tauri.conf.json	2026-03-27 09:38:57.119176182 -0400
-@@ -19,7 +19,7 @@
+--- a/apps/tauri/tauri.conf.json	2026-03-27 11:07:00.144962509 -0400
++++ b/apps/tauri/tauri.conf.json	2026-03-27 11:07:14.179525318 -0400
+@@ -15,11 +15,12 @@
+         "height": 800,
+         "resizable": true,
+         "fullscreen": false,
+-        "visible": false
++        "visible": false,
++        "decorations": false
        }
      ],
      "security": {
