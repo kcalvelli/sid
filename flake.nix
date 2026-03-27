@@ -4,7 +4,7 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     zeroclaw = {
-      url = "github:zeroclaw-labs/zeroclaw/v0.6.3";
+      url = "github:zeroclaw-labs/zeroclaw/v0.6.5";
       flake = false;  # source-only — we build it ourselves
     };
     agenix = {
@@ -28,10 +28,10 @@
 
           zeroclaw-web = pkgs.buildNpmPackage {
             pname = "zeroclaw-web";
-            version = "0.6.3";
+            version = "0.6.5";
             src = zeroclaw;
             sourceRoot = "source/web";
-            npmDepsHash = "sha256-RMiFoPj4cbUYONURsCp4FrNuy9bR1eRWqgAnACrVXsI=";
+            npmDepsHash = "";
             postPatch = ''
               # PWA: inject manifest, service worker, icons, and registration module
               cp ${pwaOverlay}/manifest.json public/manifest.json
@@ -60,33 +60,23 @@
         {
           zeroclaw = pkgs.rustPlatform.buildRustPackage {
             pname = "zeroclaw";
-            version = "0.6.3";
+            version = "0.6.5";
             src = zeroclaw;
 
-            cargoHash = "sha256-YZ+VKHG3k+GxbhMcuXGDca+qmrprNG4lDcR64ysGhRg=";
+            cargoHash = "";
 
 
             patches = [
-              ./patches/0001-fix-add-missing-futures-and-async-stream-crate-depen.patch
-              ./patches/0002-feat-prepend-ISO-8601-timestamps-to-all-incoming-mes.patch
-              ./patches/0003-feat-wire-XMPP-channel-into-channel-registry-and-con.patch
-              ./patches/0004-feat-use-full-agent-loop-for-webhook-requests.patch
-              ./patches/0005-feat-add-v1-models-endpoint-for-OpenAI-compatible.patch
-              ./patches/0006-feat-wire-OpenAI-compatible-v1-chat-completions.patch
-              ./patches/0007-fix-skip-emails-from-own-address-to-prevent-reply.patch
-              ./patches/0008-feat-preserve-email-subject-in-reply-threading.patch
-              ./patches/0009-feat-save-sent-emails-to-IMAP-Sent-folder.patch
-              ./patches/0010-feat-add-channel-context-prefix-to-Telegram-messages.patch
-              ./patches/0011-fix-report-accurate-capabilities-for-Claude-Code.patch
-              ./patches/0012-fix-skip-permission-checks-in-Claude-Code-CLI.patch
-              ./patches/0013-feat-add-swarm-gateway-endpoint.patch
-              ./patches/0014-feat-sop-provider-override.patch
-              ./patches/0015-feat-swarm-agentic-agent-loop.patch
-              ./patches/0016-fix-canvas-websocket-subprotocol-response.patch
-              ./patches/0017-fix-canvas-store-shared-between-gateway-and-channels.patch
-              ./patches/0018-fix-skip-noreply-and-bounce-emails-to-prevent-error.patch
-              ./patches/0019-feat-add-cross-channel-awareness-to-Telegram-contex.patch
-              ./patches/0020-fix-strip-anthropic-prefix-from-model-id-in-API-cal.patch
+              ./patches/0001-feat-wire-XMPP-channel-into-channel-registry-and-con.patch
+              ./patches/0002-feat-use-full-agent-loop-for-webhook-requests.patch
+              ./patches/0003-feat-add-v1-models-endpoint-for-OpenAI-compatible.patch
+              ./patches/0004-feat-wire-OpenAI-compatible-v1-chat-completions.patch
+              ./patches/0005-fix-skip-emails-from-own-address-to-prevent-reply.patch
+              ./patches/0006-feat-preserve-email-subject-in-reply-threading.patch
+              ./patches/0007-feat-save-sent-emails-to-IMAP-Sent-folder.patch
+              ./patches/0008-fix-skip-permission-checks-in-Claude-Code-CLI.patch
+              ./patches/0009-feat-sop-provider-override.patch
+              ./patches/0010-fix-skip-noreply-and-bounce-emails-to-prevent-error.patch
             ];
 
             postPatch = ''
@@ -112,14 +102,14 @@
 
           zeroclaw-desktop = pkgs.rustPlatform.buildRustPackage {
             pname = "zeroclaw-desktop";
-            version = "0.6.3";
+            version = "0.6.5";
             src = zeroclaw;
 
-            cargoHash = "sha256-YZ+VKHG3k+GxbhMcuXGDca+qmrprNG4lDcR64ysGhRg=";
+            cargoHash = "";
 
             patches = [
-              ./patches/0021-feat-runtime-gateway-url-from-ZEROCLAW_GATEWAY_URL.patch
-              ./patches/0022-feat-broaden-tauri-csp-for-remote-gateway.patch
+              ./patches/0011-feat-runtime-gateway-url-from-ZEROCLAW_GATEWAY_URL.patch
+              ./patches/0012-feat-broaden-tauri-csp-for-remote-gateway.patch
             ];
 
             cargoBuildFlags = [ "-p" "zeroclaw-desktop" ];
@@ -181,26 +171,6 @@
               homepage = "https://github.com/zeroclaw-labs/zeroclaw";
               license = lib.licenses.asl20;
               mainProgram = "zeroclaw-desktop";
-            };
-          };
-
-          zeroclaw-mcp = pkgs.python3Packages.buildPythonApplication {
-            pname = "zeroclaw-mcp";
-            version = "0.1.0";
-            pyproject = true;
-
-            src = ./mcp-servers/zeroclaw;
-
-            build-system = [ pkgs.python3Packages.hatchling ];
-            dependencies = with pkgs.python3Packages; [
-              mcp
-              httpx
-              slixmpp
-            ];
-
-            meta = {
-              description = "MCP server bridging ZeroClaw gateway tools to Claude Code";
-              mainProgram = "zeroclaw-mcp";
             };
           };
 

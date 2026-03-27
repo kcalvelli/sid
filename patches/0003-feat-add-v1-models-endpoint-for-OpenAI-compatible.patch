@@ -1,25 +1,25 @@
-From 46485134b14b436de98497db5f0b1c61c189e051 Mon Sep 17 00:00:00 2001
+From c58e3a474cd22e0f3c380c91d857fd5f5d8ed7b1 Mon Sep 17 00:00:00 2001
 From: Keith Calvelli <keith@calvelli.dev>
-Date: Mon, 16 Mar 2026 15:18:38 -0400
-Subject: [PATCH 05/10] feat: add /v1/models endpoint for OpenAI-compatible
+Date: Fri, 27 Mar 2026 14:06:51 -0400
+Subject: [PATCH 3/4] feat: add /v1/models endpoint for OpenAI-compatible
 
 ---
  src/gateway/mod.rs | 6 ++++++
  1 file changed, 6 insertions(+)
 
 diff --git a/src/gateway/mod.rs b/src/gateway/mod.rs
-index 53c4c537..73b09cd2 100644
+index 42f1fa61..936b56c0 100644
 --- a/src/gateway/mod.rs
 +++ b/src/gateway/mod.rs
-@@ -680,6 +680,7 @@ pub async fn run_gateway(host: &str, port: u16, config: Config) -> Result<()> {
+@@ -891,6 +891,7 @@ pub async fn run_gateway(host: &str, port: u16, config: Config) -> Result<()> {
          .route("/admin/paircode/new", post(handle_admin_paircode_new))
          // ── Existing routes ──
          .route("/health", get(handle_health))
 +        .route("/v1/models", get(handle_models))
          .route("/metrics", get(handle_metrics))
          .route("/pair", post(handle_pair))
-         .route("/webhook", post(handle_webhook))
-@@ -921,6 +922,11 @@ pub struct WebhookBody {
+         .route("/pair/code", get(handle_pair_code))
+@@ -1322,6 +1323,11 @@ pub struct WebhookBody {
      pub message: String,
  }
  

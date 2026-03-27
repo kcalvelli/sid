@@ -14,7 +14,7 @@ use axum::{
         IntoResponse, Json,
     },
 };
-use futures::stream::Stream;
+use futures_util::stream::Stream;
 use serde::Deserialize;
 use std::sync::OnceLock;
 
@@ -211,22 +211,16 @@ fn handle_streaming(
     let chat_id = format!("chatcmpl-{}", uuid::Uuid::new_v4());
     let response_text = response.to_string();
 
-    let stream = async_stream::stream! {
-        // 1. Role chunk
-        let role_chunk = oai_chunk(&chat_id, serde_json::json!({"role": "assistant"}), None);
-        yield Ok(Event::default().data(serde_json::to_string(&role_chunk).unwrap_or_default()));
+    let role_chunk = oai_chunk(&chat_id, serde_json::json!({"role": "assistant"}), None);
+    let content_chunk = oai_chunk(&chat_id, serde_json::json!({"content": response_text}), None);
+    let finish_chunk = oai_chunk(&chat_id, serde_json::json!({}), Some("stop"));
 
-        // 2. Content chunk (full response)
-        let content_chunk = oai_chunk(&chat_id, serde_json::json!({"content": response_text}), None);
-        yield Ok(Event::default().data(serde_json::to_string(&content_chunk).unwrap_or_default()));
-
-        // 3. Finish chunk
-        let finish_chunk = oai_chunk(&chat_id, serde_json::json!({}), Some("stop"));
-        yield Ok(Event::default().data(serde_json::to_string(&finish_chunk).unwrap_or_default()));
-
-        // 4. Done
-        yield Ok(Event::default().data("[DONE]".to_string()));
-    };
+    let stream = futures_util::stream::iter(vec![
+        Ok(Event::default().data(serde_json::to_string(&role_chunk).unwrap_or_default())),
+        Ok(Event::default().data(serde_json::to_string(&content_chunk).unwrap_or_default())),
+        Ok(Event::default().data(serde_json::to_string(&finish_chunk).unwrap_or_default())),
+        Ok(Event::default().data("[DONE]".to_string())),
+    ]);
 
     Sse::new(stream).keep_alive(KeepAlive::default())
 }
