@@ -140,6 +140,7 @@
               gdk-pixbuf
               cairo
               pango
+              libayatana-appindicator
             ];
 
             # Skip tests — they need a running gateway
