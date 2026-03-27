@@ -1,0 +1,11 @@
+--- a/apps/tauri/tauri.conf.json	2026-03-27 09:38:44.207499515 -0400
++++ b/apps/tauri/tauri.conf.json	2026-03-27 09:38:57.119176182 -0400
+@@ -19,7 +19,7 @@
+       }
+     ],
+     "security": {
+-      "csp": "default-src 'self' http://127.0.0.1:* ws://127.0.0.1:*; connect-src 'self' http://127.0.0.1:* ws://127.0.0.1:*; script-src 'self' 'unsafe-inline' http://127.0.0.1:*; style-src 'self' 'unsafe-inline' http://127.0.0.1:*; img-src 'self' http://127.0.0.1:* data:"
++      "csp": "default-src 'self' http: https: ws: wss:; connect-src 'self' http: https: ws: wss:; script-src 'self' 'unsafe-inline' http: https:; style-src 'self' 'unsafe-inline' http: https:; img-src 'self' http: https: data:"
+     }
+   },
+   "bundle": {

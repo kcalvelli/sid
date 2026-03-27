@@ -110,6 +110,65 @@
             };
           };
 
+          zeroclaw-desktop = pkgs.rustPlatform.buildRustPackage {
+            pname = "zeroclaw-desktop";
+            version = "0.6.3";
+            src = zeroclaw;
+
+            cargoHash = "sha256-YZ+VKHG3k+GxbhMcuXGDca+qmrprNG4lDcR64ysGhRg=";
+
+            patches = [
+              ./patches/0021-feat-runtime-gateway-url-from-ZEROCLAW_GATEWAY_URL.patch
+              ./patches/0022-feat-broaden-tauri-csp-for-remote-gateway.patch
+            ];
+
+            cargoBuildFlags = [ "-p" "zeroclaw-desktop" ];
+            cargoTestFlags = [ "-p" "zeroclaw-desktop" ];
+
+            nativeBuildInputs = with pkgs; [
+              pkg-config
+              wrapGAppsHook3
+            ];
+
+            buildInputs = with pkgs; [
+              openssl
+              webkitgtk_4_1
+              gtk3
+              libsoup_3
+              glib-networking
+              librsvg
+              gdk-pixbuf
+              cairo
+              pango
+            ];
+
+            # Skip tests — they need a running gateway
+            doCheck = false;
+
+            postInstall = ''
+              # XDG autostart desktop file
+              mkdir -p $out/share/applications $out/etc/xdg/autostart
+              cat > $out/share/applications/zeroclaw-desktop.desktop <<EOF
+              [Desktop Entry]
+              Name=ZeroClaw
+              Comment=ZeroClaw Desktop Agent
+              Exec=$out/bin/zeroclaw-desktop
+              Icon=zeroclaw
+              Type=Application
+              Categories=Utility;
+              StartupNotify=false
+              EOF
+              cp $out/share/applications/zeroclaw-desktop.desktop $out/etc/xdg/autostart/
+            '';
+
+            meta = {
+              description = "ZeroClaw desktop tray app (Tauri)";
+              homepage = "https://github.com/zeroclaw-labs/zeroclaw";
+              license = lib.licenses.asl20;
+              mainProgram = "zeroclaw-desktop";
+            };
+          };
+
           zeroclaw-mcp = pkgs.python3Packages.buildPythonApplication {
             pname = "zeroclaw-mcp";
             version = "0.1.0";

@@ -1,0 +1,36 @@
+--- a/apps/tauri/src/state.rs	2026-03-27 09:35:33.658622534 -0400
++++ b/apps/tauri/src/state.rs	2026-03-27 09:36:06.953693674 -0400
+@@ -23,8 +23,10 @@
+ 
+ impl Default for AppState {
+     fn default() -> Self {
++        let gateway_url = std::env::var("ZEROCLAW_GATEWAY_URL")
++            .unwrap_or_else(|_| "http://127.0.0.1:42617".to_string());
+         Self {
+-            gateway_url: "http://127.0.0.1:42617".to_string(),
++            gateway_url,
+             token: None,
+             connected: false,
+             agent_status: AgentStatus::Idle,
+--- a/apps/tauri/src/lib.rs	2026-03-27 09:35:33.660787103 -0400
++++ b/apps/tauri/src/lib.rs	2026-03-27 09:36:47.693628685 -0400
+@@ -108,6 +108,19 @@
+             // Set up the system tray.
+             let _ = tray::setup_tray(app);
+ 
++            // Navigate the WebView to the configured gateway URL.
++            // This overrides the default from tauri.conf.json, allowing
++            // ZEROCLAW_GATEWAY_URL to control the target at runtime.
++            if let Some(window) = app.get_webview_window("main") {
++                let gw_url = {
++                    let s = shared.blocking_read();
++                    format!("{}/_app/", s.gateway_url)
++                };
++                if let Ok(url) = gw_url.parse() {
++                    let _ = window.navigate(url);
++                }
++            }
++
+             // Auto-pair with gateway and inject token into the WebView.
+             let app_handle = app.handle().clone();
+             let pair_state = shared.clone();
