@@ -1,0 +1,14 @@
+--- a/web/index.html
++++ b/web/index.html
+@@ -4,6 +4,11 @@
+     <meta charset="UTF-8" />
+     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+     <meta name="color-scheme" content="dark" />
++    <meta name="theme-color" content="#22d3ee" />
++    <meta name="apple-mobile-web-app-capable" content="yes" />
++    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
++    <link rel="manifest" href="/_app/manifest.json" />
++    <link rel="apple-touch-icon" href="/_app/icons/icon-192x192.png" />
+     <link rel="icon" type="image/png" href="/_app/zeroclaw-trans.png" />
+     <title>ZeroClaw</title>
+   </head>
