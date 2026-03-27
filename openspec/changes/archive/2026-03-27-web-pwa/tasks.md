@@ -25,8 +25,8 @@
 
 ## 7. Testing
 
-- [ ] 7.1 Verify installability: open dashboard on Chrome Android, confirm "Add to Home Screen" prompt appears
-- [ ] 7.2 Verify standalone mode: launch from home screen, confirm no browser chrome
+- [x] 7.1 Verify installability: open dashboard on Chrome Android, confirm "Add to Home Screen" prompt appears
+- [x] 7.2 Verify standalone mode: launch from home screen, confirm no browser chrome
 - [ ] 7.3 Verify app shell caching: load app, briefly stop gateway, reload — confirm cached shell loads (not browser error)
 - [ ] 7.4 Verify cache cleanup: deploy updated build, confirm old cache is deleted and new assets are served
 - [ ] 7.5 Verify iOS: add to home screen on Safari, confirm apple-touch-icon and standalone launch
