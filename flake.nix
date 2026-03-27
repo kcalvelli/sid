@@ -146,6 +146,11 @@
             # Skip tests — they need a running gateway
             doCheck = false;
 
+            # libappindicator is dlopen'd at runtime for system tray
+            preFixup = ''
+              gappsWrapperArgs+=(--prefix LD_LIBRARY_PATH : "${pkgs.libayatana-appindicator}/lib")
+            '';
+
             postInstall = ''
               # XDG autostart desktop file
               mkdir -p $out/share/applications $out/etc/xdg/autostart
