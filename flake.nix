@@ -63,7 +63,7 @@
             version = "0.6.5";
             src = zeroclaw;
 
-            cargoHash = "";
+            cargoHash = "sha256-1/s2ijYqanhHIsYSw85c4H3T5phnAfvV7oQeAl/6lxQ=";
 
 
             patches = [
@@ -105,7 +105,7 @@
             version = "0.6.5";
             src = zeroclaw;
 
-            cargoHash = "";
+            cargoHash = "sha256-1/s2ijYqanhHIsYSw85c4H3T5phnAfvV7oQeAl/6lxQ=";
 
             patches = [
               ./patches/0011-feat-runtime-gateway-url-from-ZEROCLAW_GATEWAY_URL.patch
