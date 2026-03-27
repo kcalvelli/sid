@@ -25,12 +25,12 @@
 
 ## 4. Build — Hash updates and compilation
 
-- [ ] 4.1 Run `nix build .#zeroclaw` to get correct `cargoHash` from error output
-- [ ] 4.2 Update `cargoHash` with correct value
-- [ ] 4.3 Run `nix build .#zeroclaw` to get correct `npmDepsHash` from error output
-- [ ] 4.4 Update `npmDepsHash` with correct value
-- [ ] 4.5 Run `nix build .#zeroclaw` — verify full build succeeds
-- [ ] 4.6 Run `nix build .#zeroclaw-desktop` — verify desktop build succeeds
+- [x] 4.1 Run `nix build .#zeroclaw` to get correct `cargoHash` from error output
+- [x] 4.2 Update `cargoHash` with correct value
+- [x] 4.3 Run `nix build .#zeroclaw` to get correct `npmDepsHash` from error output
+- [x] 4.4 Update `npmDepsHash` with correct value
+- [x] 4.5 Run `nix build .#zeroclaw` — verify full build succeeds
+- [x] 4.6 Run `nix build .#zeroclaw-desktop` — verify desktop build succeeds
 
 ## 5. Workspace docs — Clean TOOLS.md
 
