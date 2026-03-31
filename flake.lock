@@ -111,11 +111,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1774964725,
-        "narHash": "sha256-o2PqvAmLolteSm/ExZi97As8wfU9PRWWmZI0VfZtyOo=",
+        "lastModified": 1774968979,
+        "narHash": "sha256-RQXdlZWM2jI2lx3ULKP6BitifcYTz6ngv6at2KWQaQ4=",
         "owner": "kcalvelli",
         "repo": "zeroclaw-nix",
-        "rev": "3b9c645b4f48fd4f6ba74f76364177134baabefb",
+        "rev": "e1b8cfae8c3a6bf53173c95764c64faed623e33a",
         "type": "github"
       },
       "original": {
