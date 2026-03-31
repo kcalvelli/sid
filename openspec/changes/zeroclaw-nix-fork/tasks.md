@@ -69,17 +69,17 @@
 
 - [x] 8.1 Run `nix build` from sid repo — verify zeroclaw binary is produced
 - [x] 8.2 Run `nix build .#zeroclaw-desktop` — verify desktop app builds
-- [ ] 8.3 Deploy to edge via `nixos-rebuild switch`
-- [ ] 8.4 Verify zeroclaw service starts (`systemctl status zeroclaw`)
-- [ ] 8.5 Verify Telegram channel connects and responds
-- [ ] 8.6 Verify Email channel connects (IMAP/SMTP)
-- [ ] 8.7 Verify XMPP channel connects and joins MUC rooms
-- [ ] 8.8 Verify gateway web UI is accessible on configured port
-- [ ] 8.9 Verify OpenAI-compatible endpoint responds (HA integration)
-- [ ] 8.10 Verify secrets are not in nix store (`nix-store --query --references` on config path)
+- [x] 8.3 Deploy to mini via `nixos-rebuild switch`
+- [x] 8.4 Verify zeroclaw service starts (`systemctl status zeroclaw`)
+- [x] 8.5 Verify Telegram channel connects and responds
+- [x] 8.6 Verify Email channel connects (IMAP/SMTP) — IDLE on INBOX, sent/received email
+- [x] 8.7 Verify XMPP channel connects and joins MUC rooms — bound, joined xojabo MUC
+- [x] 8.8 Verify gateway web UI is accessible on configured port — HTTP 200
+- [x] 8.9 Verify OpenAI-compatible endpoint responds (HA integration) — returns model list
+- [x] 8.10 Verify secrets are not in nix store — 0 placeholders in runtime config
 
 ## 9. Documentation
 
-- [ ] 9.1 Create `SYNC.md` in the fork documenting the upstream sync workflow (fetch, merge tag to main, update hashes, build, test, push)
-- [ ] 9.2 Add a README.md to the fork explaining what it is, how to use the flake/module, and the branch structure
+- [x] 9.1 Create `SYNC.md` in the fork documenting the upstream sync workflow (fetch, merge tag to main, update hashes, build, test, push)
+- [x] 9.2 Add a README.md to the fork explaining what it is, how to use the flake/module, and the branch structure
 - [ ] 9.3 Update sid repo's openspec specs to reflect the new architecture (archive this change)
