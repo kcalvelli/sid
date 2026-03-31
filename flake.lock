@@ -86,7 +86,7 @@
       "inputs": {
         "agenix": "agenix",
         "nixpkgs": "nixpkgs",
-        "zeroclaw": "zeroclaw"
+        "zeroclaw-nix": "zeroclaw-nix"
       }
     },
     "systems": {
@@ -104,20 +104,23 @@
         "type": "github"
       }
     },
-    "zeroclaw": {
-      "flake": false,
+    "zeroclaw-nix": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
       "locked": {
-        "lastModified": 1774533415,
-        "narHash": "sha256-sjRX8ZLvULYKoxwu6OKWoCY7GxL+GYH9veIkNK+FXoI=",
-        "owner": "zeroclaw-labs",
-        "repo": "zeroclaw",
-        "rev": "4dd3385e7c9471a6c741287ca21b266ee1e50b70",
+        "lastModified": 1774964725,
+        "narHash": "sha256-o2PqvAmLolteSm/ExZi97As8wfU9PRWWmZI0VfZtyOo=",
+        "owner": "kcalvelli",
+        "repo": "zeroclaw-nix",
+        "rev": "3b9c645b4f48fd4f6ba74f76364177134baabefb",
         "type": "github"
       },
       "original": {
-        "owner": "zeroclaw-labs",
-        "ref": "v0.6.3",
-        "repo": "zeroclaw",
+        "owner": "kcalvelli",
+        "repo": "zeroclaw-nix",
         "type": "github"
       }
     }
