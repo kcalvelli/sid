@@ -160,7 +160,7 @@ The agent SHALL have access to an `xmpp_set_presence` tool that updates the bot'
 
 The channel SHALL be configured via `[channels_config.xmpp]` in config.toml with the following fields:
 - `jid` (string, required): Full JID for the bot (e.g., `sid@example.com`)
-- `password` (string, required): XMPP account password (injected from secret at activation time)
+- `password` (string, required): XMPP account password (injected by the NixOS module's preStart script from the configured `passwordFile`, not by activation-time sed replacement)
 - `server` (string, optional): Server hostname to connect to (defaults to JID domain)
 - `port` (integer, optional): Server port (defaults to 5222)
 - `ssl_verify` (boolean, optional): Whether to verify TLS certificates (defaults to true)
@@ -181,27 +181,35 @@ The channel SHALL be configured via `[channels_config.xmpp]` in config.toml with
 
 ### Requirement: NixOS module XMPP options
 
-The NixOS module SHALL provide `services.sid.xmpp.enable` and related options. When enabled, the module SHALL:
-- Add `[channels_config.xmpp]` to the generated config.toml
-- Inject the XMPP password from an agenix secret via placeholder substitution
-- Set initial presence status to "Sid here - what's up?"
+The NixOS module SHALL provide `services.zeroclaw.channels.xmpp` as a typed submodule. When enabled, the module SHALL:
+- Generate `[channels_config.xmpp]` in the base config.toml (without the password)
+- Inject the XMPP password from the configured `passwordFile` via the preStart script
+- Accept options for `jid`, `server`, `port`, `ssl_verify`, `muc_rooms`, `muc_nick`, and `passwordFile`
 
-#### Scenario: XMPP enabled in NixOS config
-- **WHEN** `services.sid.xmpp.enable = true` with JID and server configured
-- **THEN** the activation script SHALL generate a `[channels_config.xmpp]` section in config.toml with the password placeholder replaced by the agenix secret value
+#### Scenario: XMPP enabled via module
+- **WHEN** `services.zeroclaw.channels.xmpp = { enable = true; jid = "sid@calvelli.dev"; passwordFile = "/run/agenix/xmpp-password"; server = "edge.tailnet.ts.net"; }`
+- **THEN** the base config.toml SHALL contain the XMPP section without the password, and the preStart script SHALL inject the password from the file at service start
 
 #### Scenario: XMPP disabled (default)
-- **WHEN** `services.sid.xmpp.enable` is not set or false
+- **WHEN** `services.zeroclaw.channels.xmpp.enable` is not set or false
 - **THEN** no `[channels_config.xmpp]` section SHALL appear in config.toml
 
 ### Requirement: XMPP channel feature-gated in Cargo build
 
-The XMPP channel SHALL be gated behind a `channel-xmpp` Cargo feature flag. The feature SHALL be enabled in the Nix flake's `buildFeatures`. When the feature is not enabled, no XMPP-related code SHALL be compiled.
+The XMPP channel SHALL be gated behind a `channel-xmpp` Cargo feature flag. The feature SHALL be enabled in the fork's `nix/package.nix` build features. When the feature is not enabled, no XMPP-related code SHALL be compiled.
 
 #### Scenario: Build with XMPP feature enabled
-- **WHEN** `buildFeatures` includes `channel-xmpp`
+- **WHEN** the fork's nix package builds with `channel-xmpp` feature
 - **THEN** the XMPP channel code SHALL compile and the channel SHALL be available for configuration
 
 #### Scenario: Build without XMPP feature
-- **WHEN** `buildFeatures` does not include `channel-xmpp`
+- **WHEN** `channel-xmpp` is not in build features
 - **THEN** XMPP channel code SHALL not be compiled and `[channels_config.xmpp]` SHALL be ignored
+
+### Requirement: XMPP source lives in fork source tree
+
+The XMPP channel implementation (`xmpp.rs`) SHALL exist as a committed file at `src/channels/xmpp.rs` in the fork's `main` branch. It SHALL NOT be copied from an external location during build. The module declaration and config schema wiring SHALL also be commits on `main`.
+
+#### Scenario: Source file location
+- **WHEN** checking out the `main` branch of the fork
+- **THEN** `src/channels/xmpp.rs` SHALL exist as a tracked file in the repository

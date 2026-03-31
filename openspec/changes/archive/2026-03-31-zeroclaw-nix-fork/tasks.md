@@ -82,4 +82,4 @@
 
 - [x] 9.1 Create `SYNC.md` in the fork documenting the upstream sync workflow (fetch, merge tag to main, update hashes, build, test, push)
 - [x] 9.2 Add a README.md to the fork explaining what it is, how to use the flake/module, and the branch structure
-- [ ] 9.3 Update sid repo's openspec specs to reflect the new architecture (archive this change)
+- [x] 9.3 Update sid repo's openspec specs to reflect the new architecture (archive this change)
