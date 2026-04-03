@@ -26,6 +26,7 @@ let
   pushoverApiTokenFile = "/run/agenix/sid-pushover-api-token";
   elevenlabsApiTokenFile = "/run/agenix/sid-elevenlabs-api-token";
   deepgramApiTokenFile = "/run/agenix/sid-deepgram-api-token";
+  discordBotTokenFile = "/run/agenix/sid-discord-bot-token";
 in
 {
   options.services.sid = {
@@ -116,6 +117,15 @@ in
         type = lib.types.str;
         default = "Sid";
         description = "Nick to use in MUC rooms";
+      };
+    };
+
+    discord = {
+      enable = lib.mkEnableOption "Discord channel";
+      allowFrom = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        default = [ ];
+        description = "Discord user IDs allowed to message the bot (empty = deny all)";
       };
     };
   };
@@ -283,6 +293,12 @@ in
             cli = true;
             show_tool_calls = false;
             session_ttl_hours = 720;
+          } // lib.optionalAttrs cfg.discord.enable {
+            discord = {
+              bot_token = "__DISCORD_BOT_TOKEN__";
+              allowed_users = cfg.discord.allowFrom;
+              stream_mode = "multi_message";
+            };
           };
 
           web_fetch = {
@@ -509,6 +525,11 @@ in
           key=$(cat ${lib.escapeShellArg oauthTokenFile})
           ${pkgs.gnused}/bin/sed -i "s|__ANTHROPIC_API_KEY__|$key|g" ${zeroclawDir}/config.toml
         fi
+        # Discord bot token
+        if [ -f "${discordBotTokenFile}" ]; then
+          token=$(cat ${lib.escapeShellArg discordBotTokenFile})
+          ${pkgs.gnused}/bin/sed -i "s|__DISCORD_BOT_TOKEN__|$token|g" ${zeroclawDir}/config.toml
+        fi
       '';
     })
 
@@ -586,6 +607,15 @@ in
     (lib.mkIf (cfg.enable && builtins.pathExists (secretsPath + /pushover-api-token.age)) {
       age.secrets.sid-pushover-api-token = {
         file = secretsPath + /pushover-api-token.age;
+        owner = "sid";
+        group = "sid";
+        mode = "0400";
+      };
+    })
+
+    (lib.mkIf (cfg.enable && cfg.discord.enable && builtins.pathExists (secretsPath + /discord-bot-token.age)) {
+      age.secrets.sid-discord-bot-token = {
+        file = secretsPath + /discord-bot-token.age;
         owner = "sid";
         group = "sid";
         mode = "0400";

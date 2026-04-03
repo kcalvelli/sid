@@ -73,4 +73,11 @@ in
     keith
   ];
 
+  # Discord bot token for messaging channel
+  "discord-bot-token.age".publicKeys = [
+    edge
+    mini
+    keith
+  ];
+
 }
