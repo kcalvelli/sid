@@ -297,6 +297,7 @@ in
             discord = {
               bot_token = "__DISCORD_BOT_TOKEN__";
               allowed_users = cfg.discord.allowFrom;
+              mention_only = true;
               stream_mode = "multi_message";
             };
           };
