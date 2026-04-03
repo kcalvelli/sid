@@ -1,7 +1,12 @@
 # Sid NixOS Configuration
 # Thin config that sets option values on the zeroclaw-nix module.
 # The module itself (options, systemd service, hardening) lives in the fork.
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 let
   cfg = config.services.sid;
 
@@ -33,7 +38,7 @@ in
 
     extraPackages = lib.mkOption {
       type = lib.types.listOf lib.types.package;
-      default = [];
+      default = [ ];
       description = "Extra packages to add to the ZeroClaw service PATH";
     };
 
@@ -62,10 +67,12 @@ in
     };
 
     telegram = {
-      enable = lib.mkEnableOption "Telegram channel" // { default = true; };
+      enable = lib.mkEnableOption "Telegram channel" // {
+        default = true;
+      };
       allowFrom = lib.mkOption {
         type = lib.types.listOf lib.types.int;
-        default = [];
+        default = [ ];
         description = "Telegram user IDs allowed to DM the bot";
       };
     };
@@ -102,7 +109,7 @@ in
       };
       mucRooms = lib.mkOption {
         type = lib.types.listOf lib.types.str;
-        default = [];
+        default = [ ];
         description = "MUC room JIDs to auto-join";
       };
       mucNick = lib.mkOption {
@@ -127,28 +134,30 @@ in
 
         environmentFiles = [ "${zeroclawDir}/env" ];
 
-        extraPackages = (with pkgs; [
-          msmtp
-          procps
-          pciutils
-          python3
-          gnutar
-          gzip
-          inetutils
-          dnsutils
-          file
-          tree
-          claude-code
-        ]) ++ cfg.extraPackages
-           ++ lib.optional (cfg.mcpGatewayPackage != null) (
-             if cfg.mcpGatewayUrl != null then
-               pkgs.writeShellScriptBin "mcp-gw" ''
-                 export MCP_GATEWAY_URL=${lib.escapeShellArg cfg.mcpGatewayUrl}
-                 exec ${cfg.mcpGatewayPackage}/bin/mcp-gw "$@"
-               ''
-             else
-               cfg.mcpGatewayPackage
-           );
+        extraPackages =
+          (with pkgs; [
+            msmtp
+            procps
+            pciutils
+            python3
+            gnutar
+            gzip
+            inetutils
+            dnsutils
+            file
+            tree
+            claude-code
+          ])
+          ++ cfg.extraPackages
+          ++ lib.optional (cfg.mcpGatewayPackage != null) (
+            if cfg.mcpGatewayUrl != null then
+              pkgs.writeShellScriptBin "mcp-gw" ''
+                export MCP_GATEWAY_URL=${lib.escapeShellArg cfg.mcpGatewayUrl}
+                exec ${cfg.mcpGatewayPackage}/bin/mcp-gw "$@"
+              ''
+            else
+              cfg.mcpGatewayPackage
+          );
 
         channels.telegram = lib.mkIf cfg.telegram.enable {
           enable = true;
@@ -178,8 +187,10 @@ in
         };
 
         settings = {
-          default_provider = "claude-code";
-          default_model = "claude-opus-4-6";
+          #default_provider = "claude-code";
+          #default_model = "claude-opus-4-6";
+          default_provider = "openai-codex";
+          default_model = "gpt-5-codex";
           default_temperature = 0.7;
           parallel_tools = true;
 
@@ -220,10 +231,22 @@ in
             monthly_limit_usd = 100.0;
             warn_at_percent = 80;
             prices = {
-              "anthropic/claude-opus-4-6" = { input = 15.0; output = 75.0; };
-              "anthropic/claude-haiku-4-5" = { input = 0.80; output = 4.0; };
-              "anthropic/claude-sonnet-4-6" = { input = 3.0; output = 15.0; };
-              "openai/gpt-4.1" = { input = 0.0; output = 0.0; };
+              "anthropic/claude-opus-4-6" = {
+                input = 15.0;
+                output = 75.0;
+              };
+              "anthropic/claude-haiku-4-5" = {
+                input = 0.80;
+                output = 4.0;
+              };
+              "anthropic/claude-sonnet-4-6" = {
+                input = 3.0;
+                output = 15.0;
+              };
+              "openai/gpt-4.1" = {
+                input = 0.0;
+                output = 0.0;
+              };
             };
           };
 
@@ -307,7 +330,10 @@ in
           };
 
           swarms.briefing = {
-            agents = [ "researcher" "worker" ];
+            agents = [
+              "researcher"
+              "worker"
+            ];
             strategy = "sequential";
             timeout_secs = 300;
             description = "Research then execute pipeline — researcher gathers and analyzes, worker acts on findings";
@@ -413,12 +439,12 @@ in
             echo "ZEROCLAW_GATEWAY_TOKEN=$(cat ${gatewayTokenFile})"
           fi
           ${lib.optionalString cfg.xmpp.enable ''
-          echo "XMPP_JID=${cfg.xmpp.jid}"
-          if [ -f "${xmppPasswordFile}" ]; then
-            echo "XMPP_PASSWORD=$(cat ${xmppPasswordFile})"
-          fi
-          echo "XMPP_HOST=${cfg.xmpp.server}"
-          echo "XMPP_PORT=${toString cfg.xmpp.port}"
+            echo "XMPP_JID=${cfg.xmpp.jid}"
+            if [ -f "${xmppPasswordFile}" ]; then
+              echo "XMPP_PASSWORD=$(cat ${xmppPasswordFile})"
+            fi
+            echo "XMPP_HOST=${cfg.xmpp.server}"
+            echo "XMPP_PORT=${toString cfg.xmpp.port}"
           ''}
           if [ -f "${pushoverUserKeyFile}" ]; then
             echo "PUSHOVER_USER_KEY=$(cat ${pushoverUserKeyFile})"
@@ -490,10 +516,12 @@ in
     (lib.mkIf (cfg.enable && cfg.postgres.enable) {
       services.postgresql = {
         ensureDatabases = [ "sid" ];
-        ensureUsers = [{
-          name = "sid";
-          ensureDBOwnership = true;
-        }];
+        ensureUsers = [
+          {
+            name = "sid";
+            ensureDBOwnership = true;
+          }
+        ];
       };
     })
 
@@ -501,64 +529,84 @@ in
     (lib.mkIf cfg.enable {
       age.secrets.sid-xai-api-key = {
         file = secretsPath + /xai-api-key.age;
-        owner = "sid"; group = "sid"; mode = "0400";
+        owner = "sid";
+        group = "sid";
+        mode = "0400";
       };
       age.secrets.sid-anthropic-oauth-token = {
         file = secretsPath + /anthropic-oauth-token.age;
-        owner = "sid"; group = "sid"; mode = "0400";
+        owner = "sid";
+        group = "sid";
+        mode = "0400";
       };
       age.secrets.sid-github-pat = {
         file = secretsPath + /github-pat.age;
-        owner = "sid"; group = "sid"; mode = "0400";
+        owner = "sid";
+        group = "sid";
+        mode = "0400";
       };
     })
 
     (lib.mkIf (cfg.enable && cfg.telegram.enable) {
       age.secrets.sid-telegram-bot-token = {
         file = secretsPath + /telegram-bot-token.age;
-        owner = "sid"; group = "sid"; mode = "0400";
+        owner = "sid";
+        group = "sid";
+        mode = "0400";
       };
     })
 
     (lib.mkIf (cfg.enable && cfg.email.enable) {
       age.secrets.sid-email-password = {
         file = secretsPath + /genxbot-email-password.age;
-        owner = "sid"; group = "users"; mode = "0440";
+        owner = "sid";
+        group = "users";
+        mode = "0440";
       };
     })
 
     (lib.mkIf (cfg.enable && cfg.xmpp.enable) {
       age.secrets.sid-xmpp-password = {
         file = secretsPath + /xmpp-password.age;
-        owner = "sid"; group = "sid"; mode = "0400";
+        owner = "sid";
+        group = "sid";
+        mode = "0400";
       };
     })
 
     (lib.mkIf (cfg.enable && builtins.pathExists (secretsPath + /pushover-user-key.age)) {
       age.secrets.sid-pushover-user-key = {
         file = secretsPath + /pushover-user-key.age;
-        owner = "sid"; group = "sid"; mode = "0400";
+        owner = "sid";
+        group = "sid";
+        mode = "0400";
       };
     })
 
     (lib.mkIf (cfg.enable && builtins.pathExists (secretsPath + /pushover-api-token.age)) {
       age.secrets.sid-pushover-api-token = {
         file = secretsPath + /pushover-api-token.age;
-        owner = "sid"; group = "sid"; mode = "0400";
+        owner = "sid";
+        group = "sid";
+        mode = "0400";
       };
     })
 
     (lib.mkIf (cfg.enable && builtins.pathExists (secretsPath + /elevenlabs-api-token.age)) {
       age.secrets.sid-elevenlabs-api-token = {
         file = secretsPath + /elevenlabs-api-token.age;
-        owner = "sid"; group = "sid"; mode = "0400";
+        owner = "sid";
+        group = "sid";
+        mode = "0400";
       };
     })
 
     (lib.mkIf (cfg.enable && builtins.pathExists (secretsPath + /deepgram-api-token.age)) {
       age.secrets.sid-deepgram-api-token = {
         file = secretsPath + /deepgram-api-token.age;
-        owner = "sid"; group = "sid"; mode = "0400";
+        owner = "sid";
+        group = "sid";
+        mode = "0400";
       };
     })
   ];
