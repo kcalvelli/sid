@@ -24,6 +24,8 @@
           pkgs = nixpkgs.legacyPackages.${system};
         in
         {
+          sid-codex = pkgs.callPackage ./packages/sid-codex { };
+
           zeroclaw-web = zeroclaw-nix.packages.${system}.zeroclaw-web.override {
             pwaOverlay = ./web/pwa;
           };
@@ -36,6 +38,10 @@
 
           default = self.packages.${system}.zeroclaw;
         });
+
+      homeManagerModules.sid-codex = import ./modules/home-manager {
+        sidPackageFor = system: self.packages.${system}.sid-codex;
+      };
 
       nixosModules.default = { pkgs, ... }: {
         imports = [
