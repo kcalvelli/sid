@@ -187,10 +187,10 @@ in
         };
 
         settings = {
-          #default_provider = "claude-code";
-          #default_model = "claude-opus-4-6";
-          default_provider = "openai-codex";
-          default_model = "gpt-5-codex";
+          default_provider = "claude-code";
+          default_model = "claude-opus-4-6";
+          #default_provider = "openai-codex";
+          #default_model = "gpt-5-codex";
           default_temperature = 0.7;
           parallel_tools = true;
 
