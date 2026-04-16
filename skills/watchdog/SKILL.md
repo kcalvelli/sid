@@ -81,8 +81,8 @@ If mcp-dav unavailable, note "Calendar data unavailable" — do not fail the bri
 
 Use `mcp-gw` to check email:
 ```
-mcp-gw call axios-ai-mail get-unread-count
-mcp-gw call axios-ai-mail list-unread --limit 10
+mcp-gw call cairn-mail get-unread-count
+mcp-gw call cairn-mail list-unread --limit 10
 ```
 
 Extract:

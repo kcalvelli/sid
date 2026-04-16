@@ -21,11 +21,11 @@ mcp-gw call mcp-dav list-events --today
 ```
 Note: If mcp-dav is unavailable, report "CALENDAR: OFFLINE — PROBABLY FOR THE BEST"
 
-### Email (via axios-ai-mail MCP)
+### Email (via cairn-mail MCP)
 
 Use `mcp-gw` to check unread email count:
 ```
-mcp-gw call axios-ai-mail get-unread-count
+mcp-gw call cairn-mail get-unread-count
 ```
 Note: If unavailable, report "EMAIL: IMAP STARING INTO THE VOID"
 
